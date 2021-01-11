@@ -1,0 +1,296 @@
+---
+title: "Lecture 1- A Bracing Tour of Simple Linear Regression with R"
+author: "Peter Shaffery"
+date: "12/31/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+
+<!--
+## Lecture Outline
+1. Models and Statistics
+2. Simple linear regression
+
+## Models and Statistics
+It is often of interest to infer a general rule from a set of observations. For a subset of such problems, this can be done using statistics. Statistics is the practice of exploiting random variation in a study population to construct quantitative **models** of some population features.
+
+There are lots of different kinds of models, but in this course we will primarily be dealing with models of the form:
+$$
+y = f(\vec{x}; \vec{\beta}) + \epsilon
+$$
+
+Let's unpack this notation a little. The function $f(\vec{x};\vec{\beta})$ depends on two quantities: the independent variable $\vec{x}$ (sometimes called a *covariate* or *feature*) and the coefficients (or *parameters*) $\vec{\beta}$. Besides the output of the function $f$ , the dependent variables $y$ also depends on the error term $\epsilon$. The error term is sort of a "catch-all", as it represents all the behavior of $y$ not otherwise accounted for by our model. In this course, we will almost always assume that $\epsilon$ is a random variable which does not depend on $\vec{x}$ or $\vec{\beta}$.
+
+In statistical modeling, we usually are given a set of observations $(\vec{x}_1,y_1),...(\vec{x}_n,y_n)$, and would like to use them answer two basic questions:
+
+1. What is the "best guess" value of $\beta$, and how much uncertainty is in that guess?
+2. Given multiple competing versions of $f$, which should I prefer?
+
+The way in which these questions are answer is highly contextual, and the goal of this course will be to demonstrate some the most common techniques, as well as equip you with a foundation of guidelines which you can use to answer the questions in new contexts as well. For the first section of the course, we will demonstrate these techniques using one of the most fundamental statistical models: linear regression.
+
+## Simple Linear Regression
+-->
+<!-- Let's look at how we can answer the two basic questions, using an example -->
+
+## Example: Penguins!
+![](https://www.chimuadventures.com/blog/wp-content/uploads/2016/04/Chinstrap_Penguins_shutterstock_142890634.jpg)
+
+```{r message=FALSE}
+library(tidyverse)
+library(magrittr)
+library(palmerpenguins)
+```
+Say that we are researchers studying penguins in the Palmer Archipeligo of Antarctica. We have collected data on three different penguin species (Adelie, Chinstrap, and Gentoo) on three different islands (Torgersen, Biscoe, and Dream). For each subject in our dataset, we have recorded the following:
+
+* length and depth of the bill (mm)
+* length of the flippers (mm)
+* body mass (g)
+* sex
+* year of the measurement
+
+The data looks like this:
+```{r}
+penguins %>% head # the %>% is a code pipe, and comes from the package `magrittr`, this line is equivalent to `head(penguins)`
+```
+
+We are interested in the relationship between body mass ($x$) and flipper length ($y$)
+```{r}
+x = penguins %>% drop_na %>% pull(flipper_length_mm)
+y = penguins %>% drop_na %>% pull(body_mass_g)
+plot(x,y,
+     main='Body Mass and Flipper Length',
+     xlab='Body Mass (g)',
+     ylab='Flipper Length (mm)')
+```
+
+### Correlation
+They certainly *look* related, but how can we quantify this? One way is by using *correlation*. The idea here is to divide the scatter plot into quadrants, based on $\bar{x} = \frac{1}{n} \sum x_i$ and $\bar{y} = \frac{1}{n} \sum y_i$ 
+```{r}
+x.bar = x %>% mean
+y.bar = y %>% mean
+
+plot(x,y,
+     main='Body Mass and Flipper Length',
+     xlab='Body Mass (g)',
+     ylab='Flipper Length (mm)')
+abline(v=x.bar, col='red')
+abline(h=y.bar, col='red')
+```
+
+Notice that if flipper length *increases* with body mass than most points will in the upper right and lower left quadrants. That is to say, when the relationship is increasing then for most observations $x_i>\bar{x}$ and $y_i>\bar{y}$, or $x_i<\bar{x}$ and $y_i<\bar{y}$. Thus the product $(x_i - \bar{x})(y_i - \bar{y})$ will usually be *positive*. This leads us to define **covariance**:
+$$
+\text{Cov}(x_i,y_i) = \frac{1}{n-1} \sum\limits_{i=1}^n (x_i - \bar{x})(y_i - \bar{y})
+$$
+When covariance is positive then *on average* points fall into either the upper right or lower left quadrants. When covariance is negative then the opposite must hold. **Cov$(x,y)$ measures whether an increasing or decreasing relationship holds between $x$ and $y$, on average**
+
+```{r}
+n = length(x)
+cov1 = (1/(n-1)) * sum((x-x.bar)*(y-y.bar))
+cov2 = cov(x,y)
+
+c(cov1,cov2)
+```
+Say our collaborators use pounds (lbs) instead of grams (g). 1 pound is equal to about 454 grams, let's convert $x$ to pounds, and calculate covariance again:
+```{r}
+x.lbs = x/454
+cov(x.lbs,y)
+```
+We got a totally different value! Note that the sign is still positive, but the value is two orders of magnitude smaller. It's therefore usually more convenient to work with *correlation*, which is scale invariant:
+$$
+\text{Cor}(x_i,y_i) = \frac{\text{Cov}(x,y)}{s_x s_y}
+$$
+Where $s_x$ and $s_y$ are the standard deviations of $x$ and $y$:
+$$
+s_x = \sqrt{ \text{Var}[x] } = \sqrt{ \frac{1}{n} \sum\limits_{i=1}^n (x_i - \bar{x})^2 }
+$$
+
+
+```{r}
+cor(x,y)
+cor(x.lbs,y)
+```
+Like covariance, correlation can be positive (when a relationship is increasing) or negative (when a relationship is decreasing), however unlike covariance correlations is bounded to the interval $[-1,1]$.
+
+### Regression
+Linear regression comes in two flavors: simple (or 1-dimensional), and multivariate (sometimes shortened to "multiple") regression. For most of the course we will be dealing with multiple regression and its variants. However, in order to review some core statistical concepts we will start with an outline of simple regression first.
+
+The regression model is (mathematically) very simple:
+$$
+y = \beta_0 + \beta_1 x + \epsilon
+$$
+Here $\beta_0$ and $\beta_1$ are called *model coefficients*. $\beta_0$ by itself is the **intercept** and $\beta_1$ is the **slope**. We say that $\beta_1$ represents the **average increase in $y$ for a unit increase in $x$**.
+
+We also introduce $\epsilon$, which is the **error term**. In this course we will always assume that $\epsilon$ is a *random variable*.
+
+The aim of regression is to determine the *best guess* values of $\beta_0$ and $\beta_1$, denoted $\hat{\beta}_0$ and $\hat{\beta_1}$. We will choose values for $\hat{\beta}_0$ and $\hat{\beta_1}$ which minimize the error in our model. For each penguin, note that we can re-arrange the regression model:
+$$
+\epsilon_i = y_i - \beta_0 - \beta_1 x_i
+$$
+So the overall error in our model, for a specific choice of $\hat{\beta_0}$ and $\hat{\beta_1}$ is: 
+$$
+\text{Model Error} = \sum\limits_{i=1}^n \epsilon_i^2 =\sum\limits_{i=1}^n (y_i - \hat{\beta}_0 - \hat{\beta}_1 x_i)^2
+$$
+
+A reasonable way to pick our model coefficients is to minimize this model error, ie. to minimize the amount of stuff we can't explain:
+$$
+\hat{\beta_0},\hat{\beta_1} = \text{argmin}_{\beta_0,\beta_1} \sum\limits_{i=1}^n \epsilon_i^2 = \text{argmin}_{\beta_0,\beta_1} \sum\limits_{i=1}^n (y_i - \beta_0 - \beta_1 x_i)^2
+$$
+Coefficients estimated in this way are called the *least squares estimate*:
+
+It can be shown that the values which minimize the sum of squares are:
+$$
+\begin{split}
+\hat{\beta_1} &= \frac{ \sum\limits_{i=1}^n (y_i - \bar{y})(x_i - \bar{x}) }{\sum\limits_{i=1}^n (x_i - \bar{x})^2}\\
+\hat{\beta_0} &= \bar{y} - \hat{\beta_1} \bar{x}\\
+\end{split}
+$$
+
+Note that we could also write $\hat{\beta}_1$ as $\frac{\text{Cov}(x,y)}{\text{Var}[x]} = \text{Cor}(x,y)\frac{s_y}{s_x} $. Simple linear regression is therefore fundamentally the same kind of procedure as calculating covariance (or correlation) between $x$ and $y$. Let's use this now to calculate $\hat{\beta_0}$ and $\hat{\beta}_1$ for our example data:
+```{r}
+
+beta.1.hat = cov(x,y)/var(x)
+beta.0.hat = mean(y) - beta.1.hat*mean(x)
+c(beta.0.hat,beta.1.hat)
+```
+
+Plotting the line $y = \hat{\beta}_0 + \hat{\beta}_1 x$ we see that it "splits the difference", which roughly equal numbers of points above and below:
+```{r}
+xgrid = seq(min(x),max(x),.01)
+fit = beta.0.hat + beta.1.hat*xgrid
+plot(x,y,main='Body Mass and Flipper Length',xlab='Body Mass (g)',ylab='Flipper Length (mm)')
+lines(xgrid,fit,col='red')
+```
+
+### Hypothesis Testing
+So far we've been focusing primarily on the *modeling* and not much on the *statistics*. Say that we now want to make a decisions: whether body mass and flipper length are actually related or not. One way to do so would be to decide whether $\beta_1$ is "big enough". Unfortunately, like covariance, the regression model coefficients are also not independent of scale:
+```{r}
+beta.1.hat.lbs = cov(x.lbs,y)/var(x.lbs)
+beta.0.hat.lbs = mean(y) - beta.1.hat.lbs*mean(x.lbs)
+c(beta.0.hat.lbs,beta.1.hat.lbs)
+```
+We will therefore use a procedure called **hypothesis testing**. Hypothesis testing compares two "models", referred to as the *null hypothesis* ($H_0$) and the *alternate hypothesis* ($H_A$).
+
+$H_0$ represents the case of "no effect", and in this example it would be the model with $\beta_1=0$ (ie. no relationship between body mass and flipper length). The alternate hypothesis, $H_A$, would be that there *is* an effect, ie.that $\beta_1 \neq 0$. If the linear model represented by $H_0$ fits the data poorly enough, then we reject $H_0$ in favor of $H_A$, and conclude that $\beta_1 \neq 0$
+
+In order to actually perform this procedure, we need to inject a little statistics into our model.We will assume, for each penguin $i$, that the random error $\epsilon_i$ has a normal (Gaussian) distributed with mean $0$ and variance $\sigma^2$:
+$$
+\epsilon_i \sim N(0, \sigma^2)
+$$
+
+Further assume that each $\epsilon_i$ is statistically independent of the others. This pair of assumptions is so fundamental to regression (and statistics) that we give it a special name: **independent and identically distributed** or **iid** (as in "we assume the errors $\epsilon_i$ are **iid** normal with mean $0$ and variance $\sigma^2$").
+
+Since the least squares $\hat{\beta_1}$ is a function of the $y_i$, and the $y_i$ depend on the $\epsilon_i$, then our estimate of $\hat{\beta_1}$ is also a *random variable*. In fact, it can be shown that $\hat{\beta}_1$ is also normally distributed:
+$$
+\hat{\beta}_1 \sim N( \beta_1^*, \tau^2 )
+$$
+Where $\beta_1^*$ is the *true* value of $\beta_1$, and the variance $\tau^2$ is:
+$$
+\tau^2 = \frac{ \sigma^2  }{\sum\limits_{i=1}^n (x_i - \bar{x})^2}\\
+
+
+Recall that under $H_0$ $\beta_1^*=0$, and so it's equivalent to saying that:
+$$
+\hat{\beta}_1 \sim N(0, \tau^2 )
+$$
+
+We now have a way to determine whether $\hat{\beta}_1$ is "big enough"! If we scale $\hat{\beta}_1$ by $\tau$, then:
+$$
+\frac{\hat{\beta}_1}{\tau} \sim N(0, 1 )
+$$
+If the scaled version of $\hat{\beta}_1$ falls sufficiently far out on the standard normal curve ($N(0,1)$) then we'll say that it's "big" and reject $H_0$. Otherwise we'll "fail to reject $H_0$".
+
+```{r}
+xgrid = seq(-5,5,.01)
+std.norm.curve = dnorm(xgrid,0,1)
+plot(xgrid,std.norm.curve, type='l',xlab='x',ylab='') #plot curve as a line, rather than series of points
+points(.1,0,col='red',pch='x',cex=2)
+points(4,0,col='green',pch='o',cex=2)
+```
+
+There's only one snag: $\tau$ depends on the unknown value of $\sigma$, so we'll have to estimate it:
+$$
+\begin{split}
+\hat{\sigma^2} &= \frac{1}{n-2} \sum\limits_{i=1}^n \epsilon_i^2\\
+&= \frac{1}{n-2} \sum\limits_{i=1}^n (y_i - \hat{y}_i)^2\\
+&= \frac{1}{n-2} \sum\limits_{i=1}^n (y_i - \hat{\beta}_0 - \hat{\beta}_1 x_i)^2\\
+\end{split}
+$$
+The sum of the squared error terms, $\sum\limits_{i=1}^n \epsilon_i^2$ is clearly an inmportant quantity, so we'll give it a special name: Sum of Square Error (SSE). Another common word for the $\epsilon_i$ is "residuals", so SSE is sometimes also called "residual error".
+
+We can now estimate $\tau$:
+$$
+\hat{\tau}= \sqrt{ \frac{\hat{\sigma}^2 }{\sum\limits_{i=1}^n (x_i - \bar{x})^2} }
+$$
+
+And calculate:
+$$
+\hat{t} = \frac{\hat{\beta}_1}{\hat{\tau}}
+$$
+Unfortunately, because $\hat{\tau}$ is an estimate (instead of the real value of $\tau), the random variable $t$ is no long normally distributed. Instead it has a *Student-T Distribution with n-2 degress of freedom*.
+
+The distribution of $t$ has no dependence on the scale of $x$ and $y$, so we're free to choose a cutoff threshold $t^*$, such that $P[ |t| \ geq t^* ] \alpha$. If $|t| \geq t^*$ then we'll reject $H_0$, otherwise we'll fail to reject. It works out that the value of $\alpha$ is the **false positive rate** of this procedure. That is, even if $H_0$ is true we'll still reject it $\alpha %$ of the time. A usual choice is $\alpha = .05$.
+
+Let's test the hypothesis that penguin body mass is related to flipper length with a false positive rate of $\alpha = .05$:
+```{r}
+y.hat = beta.0.hat + beta.1.hat * x
+eps = y - y.hat
+SSE = sum( eps**2 )
+sigma2.hat = SSE/(n-2)
+tau.hat = sqrt( sigma2.hat/sum( (x - mean(x))**2 ) )
+t.hat = beta.1.hat/tau.hat
+
+t.grid = seq(-40,40,.01)
+t.dist = dt(t.grid, n-2)
+
+alpha = .05
+t.star.low = qt(alpha/2, n-2)
+t.star.high = qt(1-(alpha/2), n-2)
+
+xgrid = seq(-5,5,.01)
+std.norm.curve = dnorm(xgrid,0,1)
+plot(t.grid,t.dist, type='l',xlab='t',ylab='')
+abline(v=t.star.low,col='red')
+abline(v=t.star.high,col='red')
+points(t.hat,0,col='green',pch='o',cex=2)
+print(t.hat)
+```
+Wow that's really far out there! We therefore confidently reject $H_0$.
+
+A common alternative to selecting $t^*$ explicitly is to consider the **p-value** of $t$, that is the probability $P[ |t| \geq | \hat{t} | | \beta_1 =0 ]$. This gives us a sense of how "extreme" the observed value of $t$ was, relative to what it would be under $H_0$. Let's calculate that now:
+
+```{r}
+p.val = pt(t.hat,n-2,lower.tail=FALSE) + pt(-t.hat,n-2)
+p.val
+```
+Since this p-value is lower than $\alpha=.05$, we could come to the same conclusion and reject $H_0$.
+
+### Automating
+Doing all this calculation by hand is a huge pain, it's way easier to use R's built in functionality:
+```{r}
+linear.model = lm(y~x)
+summary(linear.model)
+```
+
+R has some smart logic around column names also:
+```{r}
+linear.model2 = lm(flipper_length_mm ~ body_mass_g, data= drop_na(penguins))
+summary(linear.model2)
+```
+
+
+## Appendix: Properties of Normal Random Variables
+In this course we'll make a lot of use of normally distributed random variables:
+$$
+x \sim N(\mu,\sigma^2)
+$$
+
+It's there useful to bear in mind some of the more convenient properties of a normal random variable.
+
+1. If $x \sim N(\mu,\sigma^2)$ and $\alpha$ is a fixed constant, then the sum $\alpha + x \sim N(\alpha + \mu, \sigma^2)$
+2. If $x \sim N(\mu,\sigma^2)$ and $\beta$ is a fixed constant, then the product $\beta x \sim N(\beta \mu,(\beta \sigma)^2)$
+3. If $x \sim N(\mu_x,\sigma_x^2)$ and $y ~ N(\mu_y,\sigma_y^2)$ are independent, then the sum $x+y = N(\mu_x + \mu_y,\sigma_x^2 + \sigma_y^2)$ 
