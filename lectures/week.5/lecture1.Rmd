@@ -10,42 +10,13 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```
 
-
-<!--
-## Lecture Outline
-1. Models and Statistics
-2. Simple linear regression
-
-## Models and Statistics
-It is often of interest to infer a general rule from a set of observations. For a subset of such problems, this can be done using statistics. Statistics is the practice of exploiting random variation in a study population to construct quantitative **models** of some population features.
-
-There are lots of different kinds of models, but in this course we will primarily be dealing with models of the form:
-$$
-y = f(\vec{x}; \vec{\beta}) + \epsilon
-$$
-
-Let's unpack this notation a little. The function $f(\vec{x};\vec{\beta})$ depends on two quantities: the independent variable $\vec{x}$ (sometimes called a *covariate* or *feature*) and the coefficients (or *parameters*) $\vec{\beta}$. Besides the output of the function $f$ , the dependent variables $y$ also depends on the error term $\epsilon$. The error term is sort of a "catch-all", as it represents all the behavior of $y$ not otherwise accounted for by our model. In this course, we will almost always assume that $\epsilon$ is a random variable which does not depend on $\vec{x}$ or $\vec{\beta}$.
-
-In statistical modeling, we usually are given a set of observations $(\vec{x}_1,y_1),...(\vec{x}_n,y_n)$, and would like to use them answer two basic questions:
-
-1. What is the "best guess" value of $\beta$, and how much uncertainty is in that guess?
-2. Given multiple competing versions of $f$, which should I prefer?
-
-The way in which these questions are answer is highly contextual, and the goal of this course will be to demonstrate some the most common techniques, as well as equip you with a foundation of guidelines which you can use to answer the questions in new contexts as well. For the first section of the course, we will demonstrate these techniques using one of the most fundamental statistical models: linear regression.
-
-## Simple Linear Regression
--->
-<!-- Let's look at how we can answer the two basic questions, using an example -->
-
 ## Example: Penguins!
 ![](https://www.chimuadventures.com/blog/wp-content/uploads/2016/04/Chinstrap_Penguins_shutterstock_142890634.jpg)
 
 ```{r message=FALSE}
-library(tidyverse)
-library(magrittr)
 library(palmerpenguins)
 ```
-Say that we are researchers studying penguins in the Palmer Archipeligo of Antarctica. We have collected data on three different penguin species (Adelie, Chinstrap, and Gentoo) on three different islands (Torgersen, Biscoe, and Dream). For each subject in our dataset, we have recorded the following:
+Say that we are researchers studying penguins in the Palmer Archipelago of Antarctica. We have collected data on three different penguin species (Adelie, Chinstrap, and Gentoo) on three different islands (Torgersen, Biscoe, and Dream). For each subject in our dataset, we have recorded the following:
 
 * length and depth of the bill (mm)
 * length of the flippers (mm)
@@ -55,13 +26,14 @@ Say that we are researchers studying penguins in the Palmer Archipeligo of Antar
 
 The data looks like this:
 ```{r}
-penguins %>% head # the %>% is a code pipe, and comes from the package `magrittr`, this line is equivalent to `head(penguins)`
+penguins
 ```
 
 We are interested in the relationship between body mass ($x$) and flipper length ($y$)
 ```{r}
-x = penguins %>% drop_na %>% pull(flipper_length_mm)
-y = penguins %>% drop_na %>% pull(body_mass_g)
+dat = tidyr::drop_na(penguins)
+x = dat$flipper_length_mm
+y = dat$body_mass_g
 plot(x,y,
      main='Body Mass and Flipper Length',
      xlab='Body Mass (g)',
@@ -71,8 +43,8 @@ plot(x,y,
 ### Correlation
 They certainly *look* related, but how can we quantify this? One way is by using *correlation*. The idea here is to divide the scatter plot into quadrants, based on $\bar{x} = \frac{1}{n} \sum x_i$ and $\bar{y} = \frac{1}{n} \sum y_i$ 
 ```{r}
-x.bar = x %>% mean
-y.bar = y %>% mean
+x.bar = mean(x)
+y.bar = mean(y)
 
 plot(x,y,
      main='Body Mass and Flipper Length',
@@ -278,7 +250,7 @@ summary(linear.model)
 
 R has some smart logic around column names also:
 ```{r}
-linear.model2 = lm(flipper_length_mm ~ body_mass_g, data= drop_na(penguins))
+linear.model2 = lm(flipper_length_mm ~ body_mass_g, data= dat)
 summary(linear.model2)
 ```
 
