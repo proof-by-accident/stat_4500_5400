@@ -12,7 +12,7 @@ Explain why you would or would not agree with each of the following statements:
 
 a. $\text{Cov}(Y,X)$ and $\text{Cov}(X,Y)$ can take values between $-\infty$ and $+\infty$
 b. If $\text{Cov}(Y,X) = 0$ or $\text{Cov}(X,Y) = 0$ one can conclude that there is not relationship between Y and X
-c. The least squares line fitted to the points in the scatter plot made by the points $(Y_i,\hat{Y}_i)$ has a zero intercept and a unit slope
+c. The least squares line fitted to the points in the scatter plot made by the points $(\hat{Y}_i, Y_i)$ has a zero intercept and a unit slope
 
 ## RABE 2.3
 Using the regression output listed below ("Computer Repair Data Regression Table"), test the following hypotheses using $\alpha = 0.1$:

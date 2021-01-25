@@ -1,0 +1,225 @@
+---
+title: "Lecture 4- Multiple Linear Regression"
+author: "Peter Shaffery"
+date: "1/26/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+# Staying Tidy
+Last week we saw a package called `ggplot2`, which expands R's plotting capabilities. `ggplot2` is actually one package in a whole constellation called the `tidyverse`. The `tidyverse` is a (very large) collection of R packages meant to "rebuild" some of R's basic functionality, based around a principle called ["tidy data"](http://vita.had.co.nz/papers/tidy-data.pdf).
+
+I'm not going to go too deep into tidy data right now, but the basic idea is that each column in a dataset should correspond to a single variable, for example:
+
+**Untidy Data**
+
+| year_2010 | year_2011 | year_2012 |
+|-|-|-|
+| 10 | 14 | 2 |
+| 13 | 9 | 5 |
+| 8 | 12 | 4 |
+
+**Tidy Data**
+
+| year | counts |
+|-|-|
+| 2010 | 10 |
+| 2010 | 13 |
+| 2010 | 8 |
+| 2011 | 14 |
+| 2011 | 9 |
+| 2011 | 12 |
+| 2012 | 2 |
+| 2012 | 5 |
+| 2012 | 4 |
+
+Tidy data makes data manipulation a lot easier, and packages in the `tidyverse` take advantage of this to project some very powerful data manipulation tools. We've already seen one `tidyverse` function: `tidyr::drop_na`.
+
+```{r}
+library(tidyverse) # imports a set of the "basic" tidyverse packages (including tidyr and dplyr)
+library(magrittr) # imports a code pipe %>%
+```
+
+One tool which makes working in the `tidyverse` is the **code pipe**: `%>%`, which comes from the package [`magrittr`](https://en.wikipedia.org/wiki/The_Treachery_of_Images). For those of you familiar with Unix-derived OSs, this symbol operates similarly to the Unix `|`
+
+```{r}
+x = 1:10
+y = rnorm(length(x),mean=x)
+mean(x)
+x %>% mean
+
+x %>% mean %>% cos
+
+cov(x,y)
+x %>% cov(y)
+x %>% cov(.,y)
+```
+
+One particularly handy variant of the standard code pipe, is the "assignment pipe": `%<>%`
+```{r}
+z = x
+z %<>% mean
+z
+```
+
+# Fuel Analysis
+We've been contracted by the US Department of Energy (DOE) to perform a study of the relationship between fuel taxes, and gasoline usage of automobiles.
+
+```{r}
+# The dataset below contains data for the 50 states, including 
+# 1971 population in thousands (pop), 
+# 1972 gasoline tax in cents per gallon (tax), 
+# thousands of licensed drivers 1971 (licenses), 
+# per capita income in dollars (income), 
+# thousands of miles of federally funded highways in 1971 (hwy) 
+# total 1972 fuel consumption in millions of gallons (gas)
+
+fuel = read.csv('../../data/fuel.csv')
+fuel %<>% drop_na
+
+head(fuel)
+pairs(fuel %>% dplyr::select(-pop,-state)) 
+```
+
+Let's start with a simple linear regression (SLR):
+```{r}
+slr = lm(gas~tax, data=fuel)
+
+summary(slr)
+plot(slr,which=c(1,2,3))
+```
+
+What do we think about this output? How do we interpret the things we're seeing here?
+
+# Explaining More Variability
+Fuel consumption probably depends on more than just the fuel tax. How can we incorporate this information into our model?
+
+Recall how we broke down the components of our SLR model:
+$$
+\begin{split}
+y_i &= (\beta_0 + \beta_1 x_i) + (\epsilon_i)\\
+\text{Dep. Variable} &= (\text{The stuff we explain}) + (\text{The stuff we can't explain})\\
+\end{split}
+$$
+In this example, our SLR model might be described as:
+$$
+\text{GAS} = \beta_0 + \beta_1 \text{TAX} + \text{EVERYTHING ELSE}
+$$
+Since $\text{EVERYTHING ELSE}$ (by definition) depends on eg. $\text{LICENCES}$, we might write:
+$$
+\text{EVERYTHING ELSE} = \beta_2 + \beta_3 \text{LICENSES} + \text{EVERYTHING BUT TAX AND LICENSES}
+$$
+That is, we can model the error term **through a second SLR model**.
+
+But how do we choose $\hat{\beta_2}$ and $\hat{\beta_3}$? For $\hat{\beta_0}$ and $\hat{\beta_1}$ we used our observations $(x_i,y_i)$, but the $\epsilon_i$ are unobserved.
+
+Well, recall that we have *estimates* of the $\epsilon_i$, the residuals $\hat{\epsilon_i} = y_i - \hat{y_i}$. One option to fit $\hat{\beta_2}$ and $\hat{\beta_3}$ would be to run a SLR on the points $(z_i, \hat{\epsilon_i})$ where $z_i$ is that $i^{\text{th}}$ observation for the $\text{LICENSES}$ variable:
+```{r}
+eps.hat = resid(slr)
+plot(fuel$licenses,eps.hat)
+
+resid.mod.licenses = lm(eps.hat~fuel$licenses)
+summary(resid.mod.licenses)
+```
+
+Well okay, we've fit $\hat{\beta_2}$ and $\hat{\beta_3}$, but how do we interpret them?
+
+We can sub our model for $\text{EVERYTHING ELSE}$ directly into our model for $\text{GAS}$:
+$$
+\text{GAS} = \beta_0 + \beta_1 \text{TAX} + \beta_2 + \beta_3 \text{LICENSES} + \text{EVERYTHING BUT TAX AND LICENSES}
+$$
+
+And collecting up the constants gives us:
+$$
+\text{GAS} = (\beta_0 + \beta_2) + \beta_1 \text{TAX} + \beta_3 \text{LICENSES} + \text{EVERYTHING BUT TAX AND LICENSES}
+$$
+
+Note that since both $\beta_0$ and $\beta_2$ are constants, we could just write them as a single constant, $\beta_0'$
+$$
+\text{GAS} = \beta_0' + \beta_1 \text{TAX} + \beta_3 \text{LICENSES} + \text{EVERYTHING BUT TAX AND LICENSES}
+$$
+This a Multiple Linear Regression model (MLR). In order to clean up the notation a little, going forward I'll write this as:
+$$
+\text{GAS}_i = \beta_0 + \beta_1 \text{TAX}_i + \beta_2 \text{LICENSES}_i + \epsilon_i
+$$
+
+Or, more generally:
+$$
+y_i = \beta_0 + \beta_1 x_{1,i} + \beta_2 x_{2,i} + \epsilon_i
+$$
+But *be careful*, I've overloaded (assigned multiple meanings to) each of the symbols here. The $\epsilon_i$ above represents $\text{EVERYTHING BUT TAX AND LICENSES}$, and **is not the same as the error term in our original SLR**. 
+
+In the SLR model, $\beta_1$ was interpreted as **the average change in y, for a unit change in x**. In the MLR model, the interpretation is similar, but with an important change. 
+
+Coefficient $\beta_1$ represents **the average change in y, for a unit change in x, at a fixed value of z**. That is, our MLR model *isolates* the effect of one independent variable on the dependent variable, *holding all other variables constant* (latin: *ceteris paribus*, "all else unchanged").
+
+>If two states have the same number of licensed drives $z_i=z_j$, and differ in their fuel tax by a single unit $x_i - x_j = 1$, then *on average* their gas consumption will differ by $E[y_i - y_j] = \beta_1$. The interpretation of $\beta_2$ is similar
+
+# Fitting MLR in R
+A closed form formula for $\hat{beta_0}, \hat{\beta_1}, \hat{\beta_2}$ does exist (we'll see how to derive it next lecture). For now, however, let's see how R can be used to calculate $\hat{\beta_1}$ and $\hat{\beta_2}$ simultaneously:
+```{r}
+mlr = lm(gas~tax+licenses, data=fuel)
+summary(mlr)
+```
+
+Let's compare the coefficients of the three models
+```{r}
+slr
+resid.mod.licenses # SLR on residuals
+mlr
+```
+We see that the estimate for $\hat{\beta_2}$ is the same in both `mlr` and in `resid.mod.licenses`
+
+# Hypothesis Testing - MLR Style
+Recall that in SLR we could perform procedure to select between the two possible hypotheses:
+
+1. **Null Hypothesis ($H_0$):**  $\beta_1=0$
+2. **Alternate Hypothesis ($H_A$):** $\beta_1 \neq 0$
+
+In MLR we test a similar pair of hypotheses:
+
+1. **Null Hypothesis ($H_0$):**  $\beta_1=\beta_2 = 0$
+2. **Alternate Hypothesis ($H_A$):** Either $\beta_1 \neq 0$ or $\beta_2 \neq 0$
+
+Broadly, these hypotheses can be interpreted as measuring whether our entire model is any good.
+
+To do so, we use a generalized variant of the *t-statistic*, called an **F-statistic**. In SLR the the F-statistic is (basically) the square of the t-statistic, so it doesn't matter which we use for hypothesis testing. For multi-dimensional models, however, they are different
+
+$$
+F = \frac{\text{SSR}/k}{SSE/(n-k-1)}
+$$
+Here $n$ is the number of observations and $k$ is the number of independent variables (in the example $k=2$), while SSR and SSE have basically the same definitions as in SLR, 
+
+$$
+\begin{split}
+\hat{y_i} &= \hat{\beta_0} + \hat{\beta_1} \text{TAX}_i + \hat{\beta_2}\text{LICENSES}_i\\
+SSE &= \sum_{i=1}^n \hat{\epsilon_i}^2 = \sum_{i=1}^n (y_i - \hat{y_i})^2\\
+SSR &= \sum_{i=1}^n (\hat{y_i} - \bar{y} )^2\\
+\end{split}
+$$
+I'm not going to go too much further with F-tests (if you're familiar with ANOVA, it is the same as here), but the core idea is that we can calculate a p-value with our F-statistic. R provides this as part of its standard regression table:
+```{r}
+# our whole model is not trash:
+summary(mlr)
+```
+
+We see that since the p-value for this F-statistic is less than any reasonable $\alpha$ (such as $\alpha=.05$ or even $\alpha=.01$), that we can conclude that *either $\text{TAX}$ or $\text{LICENSES}$ has a significant effect on $\text{GAS}$.
+
+### Tangent: F-tests and p-hacking.
+Recall that our alternate hypothesis stated that either $\beta_1 \neq 0$ or $\beta_2 \neq 0$. 
+Let's pretend for a second that this alternate hypothesis was not true (ie. that we accepted its corresponding $H_0$). Based on this, we decide to add 10 more variables to the dataset, giving us coefficients $\beta_1, \beta_2,...,\beta_{12}$. 
+
+*Just by chance*, there's a high probability that *at least one* of these 10 new variables has *some* correlation with $\y_i$ (recall that it's easy to find small correlations, even when there's no causal link).
+
+The way that we've set up $H_0$ and $H_A$, we've made it very difficult for $H_0$ to fit the data. Briefly: $H_A$ only has to get lucky once, **$H_0$ has to be lucky everytime**.
+
+This assymmetry causes the p-value of an F-Statistic to get very small as $k$ (the number of predictors) grows large. Thus for even moderate values of $k$, the $F-statistic$ might be considered to have an outsized false positive rate. There are ways to account for this (such as the [Bonferroni Correction](https://en.wikipedia.org/wiki/Bonferroni_correction)), but my opinion this property makes F-tests more trouble than they're worth.
+
+The practice of chucking more variables into your model in order to achieve significance is sometimes called "fishing", and is considered a type of p-hacking (techniques to manipulate a statistical procedure in order to get significance, and thereby score a publication or similar). P-hacking is considered unethical when done intentionally (you're effectively committing academic fraud), but can be easy to do by accident. Watch out for accidental p-hacking, lest you have to publish an embarassing retraction.
+
+# Hypothesis Testing - Individual Coefficients
+You will notice in the regression table, that R has assigned p-values to all the coefficients individually, not just the F-statistic for the whole model.

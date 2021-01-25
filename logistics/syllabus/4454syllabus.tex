@@ -1,0 +1,130 @@
+%% LyX 1.6.4 created this file.  For more info, see http://www.lyx.org/.
+%% Do not edit unless you really know what you are doing.
+\documentclass[english]{article}
+\usepackage{bookman}
+\usepackage[T1]{fontenc}
+\usepackage[latin1]{inputenc}
+\usepackage[letterpaper]{geometry}
+\geometry{verbose,tmargin=0.5in,bmargin=0.5in,lmargin=0.5in,rmargin=0.5in}
+\pagestyle{empty}
+\usepackage{babel}
+
+\usepackage[unicode=true, pdfusetitle,
+ bookmarks=true,bookmarksnumbered=false,bookmarksopen=false,
+ breaklinks=false,pdfborder={0 0 1},backref=false,colorlinks=false]
+ {hyperref}
+
+\makeatletter
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% User specified LaTeX commands.
+
+
+%------------------------Dimensions----------------------------
+%\setlength{\topmargin}{-.75in}
+%\setlength{\oddsidemargin}{-.6in}
+%\setlength{\textwidth}{7.5truein}
+%\setlength{\textheight}{10.0truein}
+
+%setlength{\topmargin}{-.20in}
+%\setlength{\headheight}{0in} 
+%\setlength{\headsep}{0in} 
+%\setlength{\oddsidemargin}{-.4in}
+%\setlength{\textwidth}{7.25truein}
+%\setlength{\textheight}{10.truein}
+
+%\renewcommand{\baselinestretch}{-.05}
+%------------------------Dimensions----------------------------
+
+%-------------------------------------------------------------
+% Here are the important values, all collected up in one place.
+% Note: in a few places, after you use one of the variables,
+% LaTeX will not put in the correct space. In these cases, I
+% put in a phantom space using \phantom{}.
+% -- Adam Norris  Aug 2001
+%------------------------Variables----------------------------
+\newcommand{\theSemester}{Spring 2021}
+\newcommand{\theCourse}{STAT 4400/5400}
+\newcommand{\theSubject}{Advanced Statistical Modeling}
+\newcommand{\theNextCourse}{}
+\newcommand{\midtermExamReleased}{Mar 2, 2021}
+\newcommand{\midtermExamDue}{Mar 9, 2021}
+\newcommand{\finalExamDate}{}
+\newcommand{\finalExamTime}{}
+\newcommand{\lastDayClass}{Apr 29, 2021}
+\newcommand{\disabilityDate}{}
+\newcommand{\courseHomepage}{}
+\newcommand{\lastDropDate}{Feb 1, 2021}
+
+\newcommand{\lectureNumberA}{Instructor}
+\newcommand{\lectureTimeA}{Tue/Thu 4--5:15p}
+\newcommand{\lectureRoomA}{\href{https://cuboulder.zoom.us/j/96080199730?pwd=MEp1bCsva1VjeU1raXBFY3VIRXJlUT09}{Zoom}, Password: \textit{regression}}
+\newcommand{\instructorNameA}{Peter Shaffery}
+\newcommand{\instructorOfficeHoursA}{Tue/Thur 5:15--5:45p, Sat 10a--12p}
+\newcommand{\instructorOfficeA}{}
+\newcommand{\instructorOfficePhoneA}{}
+\newcommand{\instructorEmailAddressA}{{\it peter.shaffery@colorado.edu}}
+
+
+%\newcommand{\lectureNumberC}{Course Assistants}
+%\newcommand{\lectureTimeC}{}
+%\newcommand{\lectureRoomC}{}
+%\newcommand{\instructorNameC}{Kirk Van Arkel}
+%\newcommand{\instructorOfficeHoursC}{Mondays 5:30pm-7:30pm}
+%\newcommand{\instructorOfficeC}{ECCR 211}
+%\newcommand{\instructorOfficePhoneC}{}
+%\newcommand{\instructorEmailAddressC}{{\it Kirk.VanArkel@colorado.edu}}
+
+%------------------------Variables----------------------------
+
+\makeatother
+
+\begin{document}
+\begin{center}
+\textbf{\Large \theCourse\hfill{}\theSubject\hfill{}\theSemester}{\Large{} }
+\par\end{center}{\Large \par}
+
+\vspace*{2mm}
+\noindent {\small }%
+\begin{minipage}[t][0pt]{0.5\textwidth}
+  \textbf{\small Lectures: }{\small \lectureTimeA}\\
+  \textbf{\small Location: }{\small \lectureRoomA}\\
+  \textbf{\small Instructor: }{\small \instructorNameA, \instructorEmailAddressA}\\
+  \textbf{Office Hours: }\instructorOfficeHoursA\\
+\end{minipage}
+\vspace*{15mm}
+
+\begin{description}
+
+\item [{Course~Goals:}] To learn advanced statistical modeling.
+
+\item [{Text:}] Any edition of the following texts will be a useful reference for this course:
+  \begin{itemize}
+    \item \textit{Regression Analysis by Example}, by Chatterjee and Hadi (CU Boulder Library has an ebook)
+    \item \textit{An Introduction to Generalized Linear Models}, by Dobson and Barnett (PDFs may be ``found" online)
+  \end{itemize}
+
+\item [{Grade~Determination:}] There are a total of 50 points for the course. 20 points are distributed equally over the four homework assignments (thus 5 pts each), the midterm exam is worth 15 points, and the final exam or project is worth 15.
+
+A traditional grading scale will be used: $A: \geq90\%; B: \geq80\%; C: \geq70\%; D: \geq60\%$. The usual $+/-$ modifiers will be applied in 3.3\% intervals of the base grade (eg. a grade of "B-" will be assigned to the range 80-83.3\%, "B" to the range 83.3-86.6\%, and "B+" to the 86.6-89.9\%), however note that CU Boulder does not use a grade of "A+", and thus 93.3-100\% will be assigned a grade of "A".  Any adjustments to this scale will be made in favor of the student.
+
+\item [{Homework:}] Homework assignments will be due by the beginning of lecture, on the due date listed in Canvas. All assignments must be submitted through Canvas. Late homework will not be accepted or graded unless we have a prior agreement. In most homeworks, your analyses will be best done using a software tool (such as R or Python); in those cases, turn in a write-up of your results, along with the interpreted computer output and commands you used. Homework assigments are open-anything (books, internet, etc.), and may be done collaboratively (but write up and submit your results and answers individually). Please list your collaborators, if any, at the top of the assignment, or in the submission notes on Canvas.
+
+\item [{Exams:}] Students enrolled in 4400 will have two exams, students enrolled in 5400 will have one exam and a final project.
+  \begin{itemize}
+    \item \textit{Midterm:} There will be one midterm exam for all students. The midterm will be take-home, released at the end of lecture on \midtermExamReleased  and due by the beginning of lecture on \midtermExamDue. The exam will be open-anything (book, internet, etc.) but collaboration is not allowed.
+    \item \textit{Final:} Students in 4400 will have a final exam following the same rules as the midterm, due at the beginning of lecture on \lastDayClass. Students in 5400 will have a final project involving an in-class presentation (during the last week of classes), and a final project report due at the beginning of the last lecture (4pm on Thursday, \lastDayClass). The topic and scope of your final project is up to you, however must be discussed and approved by me no later than April 1, 2021, and should reflect the material covered in the course.
+  \end{itemize}
+
+\item [{Email:}] As this course will be operating online, I expect email to be a primary channel for communication between us. I will do my best to only send emails during "working hours" (roughly 8a-6p), and please be aware that emails sent to me outside of these hours will likely not receive a prompt response. If you have a genuine course emergency that requires my immediate attention include the word "URGENT" in your subject line.
+
+\item [{Illness or Disability Services:}] If you are unable to complete an assignment due to illness, you must bring a note from your doctor or the Wardenburg Health Center verifying your illness. We can then either arrange an extension, or have your course grade determined by the rest of your course work, depending on the circumstances. If you qualify for accommodations because of a disability, please submit to me a letter from Disability Services in a timely manner (for exam accommodations provide your letter at least one week prior to the first exam) so that your needs can be addressed. Disability Services determines accommodations based on documented disabilities. Contact Disability Services at 303-492-8671 or by email at dsinfo@colorado.edu.  If you have a temporary medical condition or injury, see Temporary Injuries under Quick Links at Disability Services \href{https://www.colorado.edu/disabilityservices/}{website} and discuss your needs with your instructor.
+
+\item [{Religious Observances:}] If you have religious obligation which conflicts with an assignment in this course, I am more than happy to make alternate arrangements. Please contact me as early as possible in order to maximize flexibility.
+
+\item [{Classroom~Behavior:}] Effective teaching requires a basis of mutual respect. I will therefore do my best to conduct myself courteously and fairly towards you, and expect the same in return. Failing to adhere to these basic standards may be subject to discipline. Also please be aware that the class rosters provided to me only include a student's legal name. I will gladly honor any request to address you by another name.
+
+\item [{Sexual Misconduct, Discrimination, Harassment and/or Related Retaliation:}] \textit{I take any instance of sexual misconduct, discrimination, harassment, or retaliation extremely seriously}. If you believe that you have been subject to misconduct under either policy should contact the Office of Institutional Equity and Compliance (OIEC) at 303-492-2127. You are also welcome to contact me directly if you feel it is appropriate, however be aware that as a mandatory reporter I will have an obligation to report instances of discrimination, harassment, or sexual harassment to the OIEC if the alleged perpetrator is an employee or student of CU. Information about the OIEC, CU's policies generally, and the campus resources available to assist individuals regarding sexual misconduct, discrimination, harassment or related retaliation can be found at the OIEC \href{https://www.colorado.edu/oiec/}{website}.
+
+\end{description}
+
+\end{document}
+
