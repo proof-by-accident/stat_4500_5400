@@ -1,0 +1,22 @@
+---
+title: "\"Lecture\" 11- Finalizing Linear Regression"
+author: "Peter Shaffery"
+date: "2/18/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# 
+
+```{r}
+educ = read.csv('../../data/education_exp.csv')
+gdp = read.csv('../../data/gdp.csv')
+states = read.csv('../../data/state_codes.csv')
+names(states) %<>% tolower
+
+gdp %<>% left_join(states, by = 'state')
+educ %<>% left_join(gdp[,c('code','gdp')],by=c('state'='code'))
+```
