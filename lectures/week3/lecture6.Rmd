@@ -1,0 +1,286 @@
+---
+title: "Lecture 6- Predictions and Leverage"
+author: "Peter Shaffery"
+date: "2/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+# Prediction Intervals
+Recall our basic MLR model for a single data point:
+$$
+y_i = \vec{x}_i^T \vec{\beta} + \epsilon_i
+$$
+Where by convention the first element of $\vec{x_i}$ is 1.
+
+Let's say that we have fit our model by obtaining $\vec{\beta}$, but now we want to predict the value of $y$ at a previously unobserved vector of independent variables, $\vec{x}_{n}$:
+
+$$
+\hat{y_n} = \vec{x_n}^T \hat{\beta}
+$$
+But what is the uncertainty in $\hat{y}_n$? How far off can we expect our prediction $\hat{y}_n$ to be from future observations?
+
+> Conceptual question: are the above two questions asking the same thing?
+
+We've spent a lot of time thinking about uncertainty in $\vec{\beta}$, recall from last lecture:
+$$
+\text{Var}[\hat{\beta}] = \sigma^2 (X^TX)^{-1}  
+$$
+You might also remember that $\hats{\beta}$ was Multivariate Normally Distributed,$\hat{\beta} \sim MVN(\vec{\beta}, \sigma^2 (X^TX)^{-1})$ and thus, by the properties of Multivariate Normals:
+$$
+\begin{split}
+\hat{y}_n &= \vec{x_n}^T \hat{\beta} \sim MVN( \vec{x_n}^T \vec{\beta}, \sigma^2 x_n^T (X^TX)^{-1} x_n )\\
+\hat{y}_n &\sim MVN( y_n, \sigma^2 x_n^T (X^TX)^{-1} x_n )\\
+\end{split}
+$$
+Note two things:
+
+1. Even though $\hat{y_n}$ is "Multivariate Normally Distributed", in this case the "Multivariate" dimension is 1, so $\hat{y_n}$ is just regular Normal distributed (and going forward I will not make this distinction explicitly)
+2. The variance $\sigma^2 x_n^T (X^TX)^{-1} x_n$ is very similar to something we saw Thursday. Can you think of where you might have seen something like this?
+
+Thinking.
+
+Thinking..
+
+Thinking...
+
+Thinking....
+
+Thinking.....
+
+It's *very* similar to our hat matrix $H = X(X^T)^{-1}X^T$ 
+
+Indeed, we could have gone through this same process for $(y_i,\vec{x_i})$ and showed that:
+$$
+\text{Var}[\hat{y}_i] = \sigma^2 x_i^T (X^TX)^{-1} x_i = \sigma^2 H_{ii}
+$$
+For a given choice of significance $\alpha$, we can now compute "confidence intervals" for $\hat{y}_i$ (or $\hat{y}_n$):
+$$
+CI_{\hat{y_i}} = [ \hat{y_i} - t_{\alpha/2,n-2}s_{\hat{y_i}}, \hat{y_i} - t_{\alpha/2,n-2}s_{\hat{y_i}}]
+$$
+Recalling that $t_{\alpha/2,n-2}$ is the $1-\alpha/2$ percent quantile of the Student T distribution with $n-2$ degrees of freedom, and $s_{\hat{y_i}}=\sqrt{\text{Var}[\hat{y}_i]}$ is the standard error
+
+Let's go back to SLR so we can visualize what these prediction intervals look like
+```{r,warning=FALSE,message=FALSE}
+library(tidyverse)
+library(magrittr)
+library(pracma)
+
+fuel = read.csv('../../data/fuel.csv') %>% drop_na
+
+n = fuel %>% nrow
+y = fuel$gas
+X = fuel %>% 
+  select(c('tax')) %>%
+  as.matrix %>%
+  cbind(rep(1,n),.)
+beta.hat = inv(t(X)%*%X)%*%t(X)
+H = X%*%beta.hat
+y.hat = H%*%y
+
+resids = (diag(n)-H)%*%y
+SSE = sum(resids^2)
+sigma2.hat = SSE/(n-2)
+var.y.hat = sigma2.hat*diag(H)
+y.se = sqrt(var.y.hat)
+y.ci = qt(.975,n-2)*y.se
+  
+plt.df = data.frame('gas'=y,
+                    'tax'=fuel$tax,
+                    'best_fit'=y.hat,
+                    'best_fit_se'=y.se,
+                    'y_hat_upper' = y.hat+y.ci,
+                    'y_hat_lower' = y.hat-y.ci
+                    )
+plt = ggplot(plt.df,aes(x=tax)) +
+  geom_point(aes(y=gas)) +
+  geom_line(aes(y=best_fit),color='blue', linetype='dashed') +
+  geom_smooth(aes(y=y_hat_upper), color='red') +
+  geom_smooth(aes(y=y_hat_lower), color='red') +
+  labs(x='Gas Tax',y='Gas Consumption')
+
+plt
+```
+
+Observe that the width of the CIs changes with $x$, why is this?
+```{r,message=FALSE}
+plt + geom_hline(yintercept=mean(y)) + geom_vline(xintercept=mean(X[,2]))
+```
+
+Well, recall how we got to this point: we accounted for uncertainty in the slope parameter $\beta_1$. As the slope increases or decreases smoothly across it's CI, the line of best fit will sweep out a curve. 
+
+Put another way, predictions made far outside our dataset will have more uncertainty than those in the middle of the dataset
+
+One final point: we have so far only account for uncertainty in $\hat{y_n}$, but this does not account for the *natural randomness* in y. A simple way to do this would be to use the standard error given:
+$$
+\tilde{s}_{y_n} = \sqrt{ \text{Var}[\hat{y_n}] + \hat{\sigma^2}  }
+$$
+This would give us the following plot:
+```{r,warning=FALSE,message=FALSE}
+y.se = sqrt(var.y.hat + sigma2.hat) 
+y.ci = qt(.975,n-2)*y.se
+  
+plt.df['y_hat_upper'] = y.hat+y.ci
+plt.df['y_hat_lower'] = y.hat-y.ci                    
+
+plt = ggplot(plt.df,aes(x=tax)) +
+  geom_point(aes(y=gas)) +
+  geom_line(aes(y=best_fit),color='blue', linetype='dashed') +
+  geom_smooth(aes(y=y_hat_upper), color='red') +
+  geom_smooth(aes(y=y_hat_lower), color='red') +
+  labs(x='Gas Tax',y='Gas Consumption')
+
+plt
+```
+This prediction interval adequately captures the variability of the data, but is so wide that it's not useful. Typically you will just the first type of prediction interval.
+
+# Leverage and Outliers
+
+## Outliers
+Let's look at a **bad** model:
+```{r}
+n=10
+x = 1:n
+y = x
+y[8] = y[8]+5
+mod = lm(y~x)
+plot(x,y)
+abline(mod,col='red')
+summary(mod)
+```
+From a statistics perspective this model might seem rather good, high $R^2$ and low p-value. But from a "just look at the freaking plot!" perspective, the model is terrible. If you cover up the point at $x=8$ then it's clear that the relationship between $x$ and $y$ is perfectly linear, with unit slope.
+
+While this isn't a "problem" in a statistical sense, from the perspective of an applied modeler it's undesirable. Not only are missing the obvious truth, but we're also getting way worse SSE than we could have without the wonky datapoint (called an **outlier**):
+```{r}
+n=10
+x = 1:n
+y = x
+y[8] = y[8]+5
+resids.outlier = lm(y~x) %>% resid
+SSE.outlier = sum(resids.outlier^2)
+
+resids.no.outlier = lm(y[-8]~x[-8]) %>% resid
+SSE.no.outlier = sum(resids.no.outlier^2)
+
+print(c(SSE.outlier,SSE.no.outlier))
+```
+
+We have already seen a quantitative measure of outlier-ness: *standardized residuals*.
+
+Recalling that in MLR
+$$
+\hat{\epsilon} = (I-H)\vec{y} 
+$$
+You can see that (similar to $\hat{y_i}$):
+$$
+\text{Var}[\hat{\epsilon}_i] = \sigma^2(1-H_{ii})
+$$
+Thus we can scale the residuals to have variance 1 by:
+$$
+\tilde{\epsilon}_i = \frac{\hat{\epsilon}}{\sigma \sqrt{1-H_{ii}}}
+$$
+Thus when $\tilde{\epsilon_i}$ are "large" (roughly > 2), we might consider them to be outliers in the y-direction.
+
+Generally outliers in the y-direction are not seen as a huge problem. It is recommended that if you believe that your data contains outliers, you perform the regression with and without them and present both results.
+
+On the other hand, outliers in the x-direction can be a *major* problem
+
+## Leverage
+Let's look at a **terrible** model:
+```{r}
+n=10
+x = rnorm(n-1)
+x[n] = 10
+y = rnorm(n-1)
+y[n] = rnorm(1,x[n])
+mod = lm(y~x)
+plot(x,y)
+abline(mod,col='red')
+summary(mod)
+```
+What's causing this?
+
+One way to understood SLR (or MLR) is to imagine that each datapoint is [connected to line by a spring](https://sam.zhang.fyi/html/fullscreen/springs/). The best-fit line is then what you would get if you let this setup come to a physical equilibrium.
+
+Following this physical intuition, we see that the point at $x=10$ has a high amount of *mechanical leverage*. Because the "fulcrum" is so large, it exerts **undue influence** on the best fit line. If we remove this point, the issue is resolved:
+
+ ```{r}
+n=10
+x = rnorm(n-1)
+y = rnorm(n-1)
+mod = lm(y~x)
+plot(x,y)
+abline(mod,col='red')
+summary(mod)
+```
+
+In analogy with the physical intuition, such points are said to have **high leverage**. In this SLR example, it was easy to visually determine the presence of a high-leverage. But in MLR (or even in some SLR cases), such a visual diagnostic might be challenging.
+
+One way we can get around this, is to consider the derivative:
+$$
+\frac{d \hat{y}_i}{d y_j} = \text{Change in prediction j due to change in data i}
+$$
+This is actually easy to compute, recall:
+$$
+\hat{\vec{y}} = H \vec{y}
+$$
+And so:
+$$
+\begin{split}
+\hat{y}_i &= H_{i\cdot} \vec{y}\\
+\hat{y}_i &= \sum_{j} H_{ij} y_j\\
+\end{split}
+$$
+A little Calc 1 gets you that:
+$$
+\frac{d \hat{y}_i}{d y_j} = H_{ij}
+$$
+
+The hat matrix therefore encodes information about leverage values! This leads us to classic definition of "leverage" $\frac{d \hat{y}_i}{d y_i} = H_{ii}$
+
+This definition of leverage is cool, but it doesn't give us a sense of the "overall" effect of a single datapoint $\vec{x}_i$. 
+
+A popular measure of "overall" leverage is called Cook's distance (or "Cook's D"). This is calculated using $\hat{y_j}_{(i)}$, the predicted value of the $j^{\text{th}}$ observation of $y$, if we ignore the $i^{\text{th}}$ data point during fitting. For the $i^{\text{th}}$ datapoint Cook's Distance is calculated:
+$$
+D_i = \frac{\sum\limits_{j=1} (\hat{y_j} - \hat{y_j}_{(i)})}{k \hat{\sigma}^2}
+$$
+Where $k$ is the number of independent variables in the model (equiv. the dimension of $\vec{x}_i$).
+
+An equivalent formula for $D_i$ (that is a pain to derive) is:
+$$
+D_i = \frac{\tilde{\epsilon}_i}{k} \frac{H_{ii}}{1-H_{ii}}
+$$
+
+When $|D_i|$ is "large" then the $i^{\text{th}}$ datapoint has a lot of influence, and you should consider excluding it. There is not really a good "cutoff" for $|D_i|$, but if it's values around 1 are usually considered "big". 
+
+## Finding Outliers in Practice
+R makes identifying outliers quite easy:
+```{r}
+mod = lm(gas~tax+licenses,data=fuel)
+plot(mod,which=5)
+```
+
+```{r}
+mod.no.outliers = lm(gas~tax+licenses,data=fuel[-c(7,37,50),])
+summary(mod)
+summary(mod.no.outliers)
+```
+
+In this case removing the outliers has a pretty serious effect on the output of our model. The decision to include or exclude them therefore needs to beq considered carefully. Was there a possible error in the data process? Are there any factors which differentiate the outliers from the other data points? 
+```{r}
+fuel[c(7,37,50),]
+```
+In this case- not really! One way to "stabilize" our results againt outliers in this example is to include more variables in the model:
+```{r}
+mod = lm(gas~tax+licenses+hwy+income,data=fuel)
+plot(mod,which=5)
+
+mod.no.outliers = lm(gas~tax+licenses+hwy+income,data=fuel[-c(7,36),])
+
+summary(mod)
+summary(mod.no.outliers)
+```
+From this we might conclude that tax has no effect

@@ -1,0 +1,353 @@
+---
+title: "Lecture 7- Simpsons Paradox and Dummy Variables"
+author: "Peter Shaffery"
+date: "1/26/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+# Modeling with Subgroups
+Last lecture we talked about outliers, points with unusually large x or y values which could trip up our regression.
+
+One solution we saw for dealing with these is to identify and *exclude* them from our model fitting.
+
+While this resolved the problem, it left us in an uncomfortable position: in some situations the decision to include or remove outliers can be the difference between significance or none. One solution that we saw last time as to include more variable in our model. 
+
+We've already seen one explanation of the influence of additional variables- do you recall how we used new variables to explain additional variation in the error term? Today we're going to look at how adding additional variables to a model can be interpreted geometrically, starting with something known as Simpson's Paradox.
+
+## Return of Penguins
+Say that we want to look at how a penguins bill depth and body mass relate to each other, so we run a linear regression:
+```{r,warning=FALSE,message=FALSE}
+library(tidyverse)
+library(magrittr)
+library(palmerpenguins)
+```
+
+```{r}
+penguins %<>% drop_na
+penguins %>% head
+mod = lm(body_mass_g ~ bill_depth_mm, data=penguins)
+mod %>% summary
+```
+Okay so longer bills seem to produce lighter penguins. How do our diagnostics look?
+```{r}
+mod %>% plot
+```
+
+These look a little weird. For one, there appear to be two clusters of data points in both residual plots. Let's plot the data directly:
+```{r}
+plt = ggplot(penguins, aes(x=bill_depth_mm, y=body_mass_g)) +
+  geom_point()+ labs(x='Bill Depth (mm)', y='Body Mass (g)') +
+  geom_abline(intercept=mod$coefficients[1], slope=mod$coefficients[2])
+plt
+```
+Oh wow, that's pretty interesting! It looks like there are two clusters of data points. Let's see what variable is causing that...
+```{r}
+plt = ggplot(penguins, aes(x=bill_depth_mm, y=body_mass_g,color=species)) +
+  geom_point()+ labs(x='Bill Depth (mm)', y='Body Mass (g)') +
+  geom_abline(intercept=mod$coefficients[1], slope=mod$coefficients[2])
+plt
+```
+Looks like Gentoo penguins have their own thing going on. Moreover, it looks like if we restrict our analysis to any single species then the relationship between body mass and bill depth will reverse. 
+
+Let's zoom in to just the Gentoos and re-run the model:
+```{r}
+gentoo = penguins %>% filter(species=='Gentoo')
+mod.gentoo = lm(body_mass_g ~ bill_depth_mm, dat=gentoo)
+
+plt = ggplot(gentoo, aes(x=bill_depth_mm, y=body_mass_g,color=species)) +
+  geom_point()+ labs(x='Bill Depth (mm)', y='Body Mass (g)') +
+  geom_abline(intercept=mod.gentoo$coefficients[1], slope=mod.gentoo$coefficients[2])
+plt
+```
+
+Our hunch is correct! What we're seeing here is an instance of **Simpson's Paradox**. This occurs when in statistical modeling when a trend present in a subgroup of the data reverses (or disappears) when the subgroups are pooled together. In a certain sense, it is very similar to issues with "leverage".
+
+How do we fix it?
+
+Well, one way is to simply run two analyses:
+```{r}
+gentoo = penguins %>% filter(species=='Gentoo')
+not.gentoo = penguins %>% filter(species!='Gentoo')
+
+mod.gentoo = lm(body_mass_g ~ bill_depth_mm, dat=gentoo)
+mod.not.gentoo = lm(body_mass_g ~ bill_depth_mm, dat=not.gentoo)
+
+plt = ggplot(penguins, aes(x=bill_depth_mm, y=body_mass_g,color=species)) +
+  geom_point()+ labs(x='Bill Depth (mm)', y='Body Mass (g)') +
+  geom_abline(intercept=mod.gentoo$coefficients[1], slope=mod.gentoo$coefficients[2]) + 
+  geom_abline(intercept=mod.not.gentoo$coefficients[1], slope=mod.not.gentoo$coefficients[2])
+plt
+```
+
+While this is fairly simple here (because we only have two categories), in some cases we will see Simpsons paradox occurring over 5 or more categories. In this case it becomes difficult (or at least annoying) to perform our analysis separately. 
+
+## Dummy Variables
+So how can we make MLR work in this case? The answer is **dummy variables**. 
+
+Dummy variables are ways of incorporating *non-numerical* (categorical) variables into our model. In this case, a penguin species does not have a concrete numerical representation (in the sense the bill depth does). We will therefore *create* a new numerical variable not already present in the data. We will call this a *dummy* variable as the numerical value chosen is not meaningful in any sense. It's just a way for us to represent different types of independent variables in the common language of math.
+
+Consider the following model:
+$$
+\text{MASS}_i = \beta_0 + \Delta \beta_0 \text{IS_GENTOO}_i + \beta_1 \text{BILL}_i 
+$$
+Here the variable $\text{IS_GENTOO}_i$ is a *dummy variable* which we will say is equal to 1 if the $i^{\text{th}}$ observation is a Gentoo penguin and 0 otherwise:
+$$
+\text{IS_GENTOO}_i =
+\begin{cases}
+0, \text{species of i is not Gentoo}\\
+1, \text{species of i Gentoo}\\
+\end{cases}
+$$
+**Note that this choice is not unique. We could have just as easily chosen a variable $\text{NOT_GENTOO}_i$ which exchanges the values of $1$ and $0$ in $\text{IS_GENTOO}_i$.
+
+So in this case the addition of a dummy variable doesn't change the basic mechanics of MLR. We designate the covariate vector:
+$$
+\vec{x}_i^T = [1, \text{IS_GENTOO}_i, \text{BILL}_i]
+$$
+And the coefficient vector:
+$$
+\vec{\beta}^T = [\beta_0, \Delta \beta_0, \beta_1]
+$$
+And then fit with the usual $\hat{\beta} = (X^TX)^{-1}X^Ty$.
+
+
+Let's see how we can fit this model in R:
+```{r}
+penguins %<>% mutate(is_gentoo=(species=='Gentoo'))
+mod.dummy = lm(body_mass_g ~ is_gentoo + bill_depth_mm, data=penguins)
+
+mod.dummy %>% summary
+
+plt.df = penguins %>% select(bill_depth_mm,body_mass_g,species) %>% cbind(fit=predict(mod.dummy))
+plt = ggplot(plt.df, aes(x=bill_depth_mm,color=species)) +
+  geom_point(aes(y=body_mass_g)) +
+  geom_line(aes(y=fit, group=species),color='black') +
+  geom_abline(intercept=mod$coefficients[1], slope=mod$coefficients[2],color='red') +
+  labs(x='Bill Depth (mm)', y='Body Mass (g)')
+
+plt
+```
+
+But why does this resolve Simpson's paradox? The answer is hinted at in the notation of our model: $\Delta \beta_0$. By including the dummy variable, we are our MLR model a way to "shift" the intercept $\beta_0$ for each of the two clusters in our data. We might say that:
+
+$$
+\begin{split}
+\beta_{0, \text{NOT GENTOO}} &= \beta_0 \\
+\beta_{0,\text{GENTOO}} &= \beta_0 + \Delta \beta_0\\
+\end{split}
+$$
+
+Now, it is important to again stress that the numerical value of $\text{IS_GENTOO}_i$ is not meaningful. Say that we had instead chosen to use the dummy variable
+$$
+\text{IS_GENTOO}_i' =
+\begin{cases}
+0, \text{species of i is not Gentoo}\\
+10, \text{species of i Gentoo}\\
+\end{cases}
+$$
+In this case our model would be:
+$$
+\text{MASS}_i = \beta_0 + \Delta \beta_0' \text{IS_GENTOO}_i' + \beta_1 \text{BILL}_i 
+$$
+And here $\Delta \beta_0 \neq \Delta \beta_0'$. However, it is true that $\text{IS_GENTOO}_i' = 10\times \text{IS_GENTOO}_i$, and thus $\Delta \beta_0 = \frac{\Delta \beta_0'}{10}$. Thus our choice of the specific dummy variable (in this case) does not make a meaningful difference.
+
+Now, notice that so far we've defined our dummy variable by one of two outcomes. Either the penguin species is Gentoo and the dummy variable is 1 (or any other non-zero number), or it is not
+and the dummy variable is 0. 
+
+But what if we wanted to our model to be able to represent multiple penguin species? Can we adapt the dummy variable framework to this case?
+
+First let's try a simple dummy variable $\text{SPECIES}_i$:
+$$
+\text{SPECIEs}_i'$ =
+\begin{cases}
+0, \text{species of i is Adelie}\\
+1, \text{species of i Gentoo}\\
+2, \text{species of i Chinstrap}\\
+\end{cases}
+$$
+
+```{r}
+species.dummy = function(species){
+  sapply(species, function(s){
+    if (s=='Adelie'){0}
+    else if (s=='Gentoo'){1}
+    else if (s=='Chinstrap'){2}
+    else { stop("That's not a penguin species, fool")}
+  })
+}
+
+penguins %<>% mutate(species.dummy = species.dummy(species))
+mod.dummy = lm(body_mass_g ~ species.dummy + bill_depth_mm, data=penguins)
+
+plt.df = penguins %>% select(bill_depth_mm,body_mass_g,species) %>% cbind(fit=predict(mod.dummy))
+plt = ggplot(plt.df, aes(x=bill_depth_mm,color=species)) +
+  geom_point(aes(y=body_mass_g)) +
+  geom_line(aes(y=fit, group=species),color='black') +
+  geom_abline(intercept=mod$coefficients[1], slope=mod$coefficients[2],color='red') + 
+  labs(x='Bill Depth (mm)', y='Body Mass (g)')
+
+plt
+```
+
+Oh no, Simpson has struck again! What's going on here? Why did this break the model again?
+
+Let's go back to the intercepts
+$$
+\begin{split}
+\beta_{0,\text{ADELIE}} &= \beta_0 \\
+\beta_{0\text{GENTOO}} &= \beta_0 + \Delta \beta_0\\
+\beta_{0,\text{CHINSTRAP}} &= \beta_0 + 2*\Delta \beta_0\\
+\end{split}
+$$
+Or choice of dummy variables is forcing our model to space each subgroup's intercepts **must** $\Delta \beta_0$ apart from each other.
+$$
+\begin{split}
+\beta_{0\text{GENTOO}} - \beta_{0,\text{ADELIE}} &= \Delta \beta_0 \\
+\beta_{0,\text{CHINSTRAP}} - \beta_{0\text{GENTOO}} &= \Delta \beta_0\\
+\end{split}
+$$
+But looking at the scatter plot we see that Chinstrap and Adelie penguisn are not really different. Thus our model is "compromising", and return a very small value of $\Delta \beta_0$, and thus the model is nearly equivalent to simply fitting to the ungrouped data.
+
+The takeaway here is that even though the particular values that we choose for our dummy variable don't matter very much, when our dummy variable encodes multipel categories the **spacing between the dummy variable values** makes a huge difference in the model behavior. 
+
+Because of this, it is usually recommended to encode multi-value categories using something called *one-hot encoding*. This sounds fancy, but it's actually very simple. Instead of creating one dummy variable that encodes all values of the category, we create a unique dummy variable for *each* value of the category.
+
+In the penguin example that would look like a pair of dummy variables:
+$$
+\begin{split}
+\text{IS_GENTOO}_i &=
+\begin{cases}
+0, \text{species of i is not Gentoo}\\
+1, \text{species of i Gentoo}
+\end{cases}\\
+\text{IS_CHINSTRAP}_i &=
+\begin{cases}
+0, \text{species of i is not Chinstrap}\\
+1, \text{species of i Chinstrap}
+\end{cases}\\
+\end{split}
+$$
+Notice that we don't need to make a third dummy for the Adelie penguins. Our model will assign them the *base* value of $\beta_0$.
+
+Our total model will then be:
+$$
+y_i = \beta_0 + \beta_1 \text{BILL}_i + \beta_2 \text{IS_GENTOO}_i + \beta_3 \text{IS_ADELIE}_i
+$$
+Where here we are using $\beta_2$ and $\beta_3$ instead of the $\Delta \beta$s.
+
+One-hot encoding variables by hand cant be a pain, so in R whenever `lm` is passed a categorical variable as a predictor it will automatically handle the process for you:
+```{r}
+mod.onehot = lm(body_mass_g ~ bill_depth_mm + species, data=penguins)
+mod.onehot %>% summary
+
+plt.df = penguins %>% select(bill_depth_mm,body_mass_g,species) %>% cbind(fit=predict(mod.onehot))
+plt = ggplot(plt.df, aes(x=bill_depth_mm,color=species)) +
+  geom_point(aes(y=body_mass_g)) +
+  geom_line(aes(y=fit, group=species),color='black') +
+  geom_abline(intercept=mod$coefficients[1], slope=mod$coefficients[2],color='red') +
+  labs(x='Bill Depth (mm)', y='Body Mass (g)')
+
+plt
+```
+And now all is right with the world.
+
+## OR IS IT??
+Let's go back and look more closely at the models fit to the two penguin subgroups
+```{r}
+gentoo = penguins %>% filter(species=='Gentoo')
+not.gentoo = penguins %>% filter(species!='Gentoo')
+
+mod.gentoo = lm(body_mass_g ~ bill_depth_mm, dat=gentoo)
+mod.not.gentoo = lm(body_mass_g ~ bill_depth_mm, dat=not.gentoo)
+
+plt = ggplot(penguins, aes(x=bill_depth_mm, y=body_mass_g,color=species)) +
+  geom_point()+ labs(x='Bill Depth (mm)', y='Body Mass (g)') +
+  geom_abline(intercept=mod.gentoo$coefficients[1], slope=mod.gentoo$coefficients[2]) + 
+  geom_abline(intercept=mod.not.gentoo$coefficients[1], slope=mod.not.gentoo$coefficients[2])
+plt
+```
+You may have noticed that the slopes estimated for the two subgroups are not entirely parallel. This is in contrast to the dummy variable model we just fit, which by definition has the same slope $\beta_1$ for all subgroups.
+
+Which model is correct? Are these slopes meaningfully different? 
+> **Conceptual question** Can you think of a simple way that we could get an answer to this?
+
+Thinking.
+
+Thinking..
+
+Thinking...
+
+There's a couple of ways that we could approach that question, but one crude but effective technique would be to simply compare the 95% CIs of the two coefficients. If they don't overalap, then following the logic of hypothesis testing we could conclude that they have different values.
+
+```{r}
+confint(mod.gentoo)
+confint(mod.not.gentoo)
+```
+
+Indeed we see that the slope coefficients are significantly different from each other. How do we incorporate this into our model? We just went to so much trouble to *avoid* subgroup analysis it would be a shame to waste it.
+
+Well, one option would be to double down on our dummy variable strategy. Remember that we had allowed the intercept to vary by subgroup by incorporating a $\Delta \beta_0 \text{IS_GENTOO}_i$ term into our model. Could we do the same thing to slope?
+
+Yes:
+$$
+y_i = \beta_0 + \Delta \beta_0 \text{IS_GENTOO}_i + (\beta_1 + \Delta \beta_1 \text{IS_GENTOO}) \text{BILL}_i
+$$
+
+Note that we could rewrite this model:
+$$
+y_i = \beta_0 + \Delta \beta_0 \text{IS_GENTOO}_i + \beta_1 \text{BILL}_i + \Delta \beta_1 \text{IS_GENTOO} \times \text{BILL}_i
+$$
+
+This is the first time that we have seen products between independent variables in our model. These types of terms are known as **interaction terms**. We will talk about them in more detail next week, but for now it's easier to understand them using the first form of this model, where $\Delta \beta_1$ is our "slope modifier".
+
+As with the first dummy variable model, fitting this is fairly simple. We simply include new variables in our covariate vector:
+$$
+\vec{x}_i^T = [1, \text{IS_GENTOO}_i, \text{BILL}_i, \text{IS_GENTOO}_i \times \text{BILL}_i]
+$$
+And where the coefficient vector is:
+$$
+\vec{\beta}^T = [\beta_0, \Delta \beta_0, \beta_1, \Delta \beta_1] 
+$$
+
+And then, again, we can compute $\hat{\beta} = (X^TX)^{-1}X^Ty$.
+
+As with the first dummy variable case, R makes performing this fitting fairly simple:
+```{r}
+# R will see our interaction term and automatically apply the dummy variable to the intercept, as well as 
+mod.interaction = lm(body_mass_g ~ bill_depth_mm*is_gentoo, data=penguins)
+
+mod.interaction %>% summary
+
+plt.df = penguins %>% select(bill_depth_mm,body_mass_g,species) %>% cbind(fit=predict(mod.interaction))
+plt = ggplot(plt.df, aes(x=bill_depth_mm,color=species)) +
+  geom_point(aes(y=body_mass_g)) +
+  geom_line(aes(y=fit, group=species),color='black') +
+  geom_abline(intercept=mod$coefficients[1], slope=mod$coefficients[2],color='red')
+
+plt
+```
+Notice that the intercept modifier term $\Delta \beta_0$ is no longer significant. In this case the geometry of the slopes seems to allow the model to think it can get away with a single intercept parameter, but this is not necessarily the case generally.
+
+## Caveat
+Subgroup analysis can be critical to getting accurate results, but just like with anything it can be overused, particularly when we use dummy variables to vary our model slopes across subgroups. Even though something like `body_weight_g ~ species * bill_depth_mm` *looks* like it only has two predictors, recall that R is going to one-hot encode every category in `species`. Since we have three species, that means our final model is going to have four coefficients. Say that we decide to also an interaction with the `sex` variable:
+```{r}
+lm(body_mass_g ~ bill_depth_mm*species*sex, data=penguins) %>% summary
+```
+
+This combinatorial explosion of subgroups can have adverse consequences on two fronts. First, as we break our subgroups down finer and finer, it becomes difficult to interpret our final output (you'll basically drown in the number of coefficients without some additional tool to help you summarize). 
+
+Second, and more importantly, there's a statistical cost. As we break down our subgroups finer and finer we *give up* information about the members of the subgroups. Recall that adding these dummy variables is basically equivalent to assigning each subgroup its own coefficient in our model. Since (by definition) the sample size in a subgroup is smaller than the sample size in the total sample, we give up a lot of information when we have too many subgroups. Later in this course we will talk about **hierarchical mdoeling**, which will give us a way to allow controlled information flow between subgroups.
+
+Perversely, even as we lose information about our subgroups through shrinking sample size, we increase the probability of obtaining a *false positive*; an estimate of a coefficient which appears statistically significant, even when the true coefficient value is 0. Recall that, at $\alpha=.05$ the probability of a false positive for a single coefficient is $5\%$. If we're estimating two coefficients for each of say, 6 subgroups, that's a total of 12 coefficients. Assuming independence between the estimates, we can imagine that if each has a $5\%$ of coming up false positive, the probability that *at least one false postive* is about $12\%$:
+```{r}
+pbinom(1,12,.05,lower.tail=FALSE)
+```
+
+In general it is better to avoid dummy variable interaction terms except where absolutely necessary:
+```{r}
+lm(body_mass_g ~ bill_depth_mm*species + sex, data=penguins) %>% summary
+```

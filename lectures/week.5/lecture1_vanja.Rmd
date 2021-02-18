@@ -1,0 +1,102 @@
+---
+title: "Lecture 1- Stats Refresh"
+author: "Peter Shaffery"
+date: "12/31/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+```{r results='hide', message=FALSE}
+library(palmerpenguins)
+library(ggplot2)
+library(tidyverse)
+library(magrittr)
+```
+
+## Lecture Outline
+1. Sampling and sample statistics
+2. Test statistics and hypothesis testing
+3. Simple linear regression
+
+
+## Sampling and Sample Statistics
+
+### Sampling
+In statistics we'll often refer to  **populations** and a **samples**:
+
+|||
+|:---|:---|
+|**Population** | The entire group of *subjects* (sometimes *units*) that we would like to study|
+|**Sample** | A selection (ideally random) of some subjects from the **population**|
+
+Often, the number of units in the population ($N$) is intractably large. We therefore use the sample (whose size $n$ is typically much smaller than $N$) to infer properties of the larger population.
+
+To make sure that our sample is representative of the population, it helps if the sample is selected *randomly*. This means that each member of the population has an equal probability of being included in the sample and measured. 
+
+The population properties we will infer this way must be *quantifiable* (measurable). That is, for each subject in the population we must be able to measure the property of interest and record a numerical value.  We'll refer to these properties as **random variables**. Random variables are either *continuous* or *discrete*:
+|||
+|:---|:---|
+|**Continuous** | Continuous random variables take values in an interval (eg. temperature, mass, or volume) |
+|**Discrete** | Discrete random variables take values in a countable set (eg. number of fingers, species identity, or age in years) |
+
+Random variables have **distributions**, functions which indicate how probable it is for the random variable to be observed with a given value. For continuous random variables this distribution is called a *probability density function* (frequently abbreviated PDF), whereas for discrete random variables it is called a *probability mass function* (PMF). Common PDFs are the Normal (Gaussian), t, $\chi^2$, F, and Gamma. Common PMFs are Bernoulli, Binomial, Poisson, and Geometric.
+
+#### Example: Penguins!
+We are studying the body mass (in grams) of Adelie penguins living on Biscoe Island in the Palmer Archipelago of Antarctica. Our **population** is thus all Adelie penguins living on Biscoe. Obviously this a very large number of units, and catching and weighing all of them would require a prohibitively expensive number of graduate students. We therefore instead collect a **sample** of 44 such penguins:
+```{r} 
+# `penguins` is an example dataset provided by the `palmerpenguins` package. For this example we only need a subset of the data:
+adelie.biscoe = penguins %>% filter((species=='Adelie') & (island=='Biscoe')) 
+# the %>% symbol is a code pipe and comes from the package `magrittr
+# the `filter` function is from `tidyverse`, and selects rows of the data based on the criteria provided as an argument, here species and island
+
+# print the number of rows in the example data
+print('The sample size is:')
+nrow( adelie.biscoe )
+```
+
+Let's look at the distribution of body weights of the penguins in our sample:
+```{r message=FALSE}
+hist(adelie.biscoe$body_mass_g, main='Dist of Sample Body Mass',xlab='Body Mass (g)')
+```
+
+The random variable "body weight" is continuous, and we see that its distribution is (maybe) Normal (if you squint).
+
+**Caveat:** as you may expect, it is difficult to collect a truly random sample from almost any realistic population. In our penguin example, random selection of penguins from the population such that every subject has an equal probability of inclusion would be as or more difficult than simply measuring all of them. Nevertheless, it is common in real-world statistical analyses to pretend that the data was perfectly random, and to ignore the consequences of violating this assumption. Time-permitting, we will cover some methods to deal with such shortcomings explicitly, but until then we'll stay in the fantasy-land where randomness can be assumed.  
+
+### Sample Statistics
+Although smaller than the total population, often the random sample size $n$ is still quite large and difficult for us to reason about. One way we can make this simpler is through **sample statistics**. Formally, a sample statistic is defined as *any function which accepts the data as an input*, although in practice only a small handful of such functions are used in statistical analysis.
+
+One sample statistic which you are probably familiar with is the *sample mean*. This function is calculated:
+$$
+\bar{x} = f(x_1,...,x_n) = \frac{1}{n} \sum\limits_{i=1}^n x_i
+$$
+Where $x_1,...,x_n$ are the random variables in the sample.
+
+An important thing to realize about sample statistics is that they are also random variables. Since the values of $x_1...,x_n$ may change as we re-run our study or experiment (and randomly select new subjects for measurement), the output of $f(x_1,...,x_n)$ will also change.
+
+#### Example: Penguins! (cont')
+Say that instead of $n=44$ we had instead collected a sample of size $n=10$ (we'll simulate this by drawing samples of $n=10$ subjects from our previous example sample of size $n=44$).
+```{r message=FALSE}
+sample.means = c()
+for (i in 1:100){
+  samp = adelie.biscoe %>% sample_n(10)
+  sample.means = c(sample.means,mean(samp$body_mass_g))
+}
+hist(sample.means, main='Sampling Dist of Mean Body Mass, n=10', xlab='Sample Mean Body Mass (g)')
+```
+Notice that the distribution of the sample means (the **sampling distribution**) looks a lot more Normal than the underlying distribution of sample body masses. This is because of the Central Limit Theorem, which states that when $n$ is large (usually said to be $n>30$), the sampling distribution of the sample mean is approximately Normal with mean $\mu$ (the population mean), and variance equal to $\frac{\sigma^2}{n}$ (where $\sigma^2$ is the population variance). If the true population PDF is Normal, then sampling distribution is exactly Normal for any value of $n$.
+
+The central limit theorem is very convenient, but doesn't hold for all sample statistics. Fortunately, for common sample statistics people have already done the work of figuring out the sampling distribution. This information will be very useful for making inferences about the larger population.
+
+## Test statistics and Hypothesis Testing
+In statistics, hypothesis testing refers to the process of using sampling distributions to make inferences about the larger population's properties. If we know what the distribution of a sample statistic ought to look, then we can judge how extreme the sample statistic's value is, relative to what the sampling distribution says it should be, and make decisions about the population properties accordingly.
+
+#### Example: Penguins! (cont')
+Say that we would like to know whether the population mean body mass of the Biscoe Adelies is larger than $3000$.
+
+#### Example: Penguins! (cont')
+Let's say that a rival research team is studying another species of penguin on Biscoe island-- the Gentoos. Our rivals have the hypothesis that Gentoos are bigger (on average) than Adelies, and therefore are the cooler study subject. We could like to test this claim using statistics.

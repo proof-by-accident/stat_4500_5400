@@ -1,0 +1,37 @@
+---
+title: "Lecture 5- The Normal Equations"
+author: "Peter Shaffery"
+date: "1/26/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+```
+
+# \\begin{Math}
+## Matrix Primer
+Matrices are rectangular arrays of numbers:
+$$
+M = \left[
+\begin{array}{ccc}
+0 & 1 & -2.3 \\
+1.3 & 4 & -1.7
+\end{array}
+\right]
+$$
+The numbers in the array are called *matrix elements*. Each matrix has a pair of *dimensions*, the number of *rows* $r$ and *columns* $c$ of elements in the matrix . The matrix dimensions are typically written as an ordered pair $(r,c)$ (sometimes $r \times c$). The example matrix $M$ has dimension $(2,3)$. If $r=c$ then the matrix is *square*, if $r>c$ then the matrix is *long*, and if $r<c$ then the matrix is *wide*. Long and wide matrices are both referred to as *rectangular*
+
+In many cases, we will have matrices whose elements are variables. In this case, we will refer to the element in the $i^{\text{th}}$ row, and the $j^{\text{th}}$ column as $M_{ij}$. In the example matrix above, $M_{12} = 1$ and $M_{23} = -1.7$.
+
+Matrices with either a single column or row get the special name of *vector*. If the vector is a row (ie. has dimension $(1,c)$), then it is called a c-dimensional *row vector*. If the vector is a column (ie. has dimension $(r,1)$), then it is called an r-dimensional *column vector*. Here is an example of a column vector:
+$$
+\vec{v} = \left[
+\begin{array}{c}
+1\\
+.01\\
+-7.5\\
+4
+\end{array}
+\ri```

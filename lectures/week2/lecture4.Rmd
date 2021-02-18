@@ -2,7 +2,7 @@
 title: "Lecture 4- Multiple Linear Regression"
 author: "Peter Shaffery"
 date: "1/26/2020"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
@@ -81,8 +81,8 @@ We've been contracted by the US Department of Energy (DOE) to perform a study of
 fuel = read.csv('../../data/fuel.csv')
 fuel %<>% drop_na
 
-head(fuel)
-pairs(fuel %>% dplyr::select(-pop,-state)) 
+fuel %>% head
+fuel %>% dplyr::select(-state) %>% pairs 
 ```
 
 Let's start with a simple linear regression (SLR):
@@ -160,7 +160,7 @@ Coefficient $\beta_1$ represents **the average change in y, for a unit change in
 >If two states have the same number of licensed drives $z_i=z_j$, and differ in their fuel tax by a single unit $x_i - x_j = 1$, then *on average* their gas consumption will differ by $E[y_i - y_j] = \beta_1$. The interpretation of $\beta_2$ is similar
 
 # Fitting MLR in R
-A closed form formula for $\hat{beta_0}, \hat{\beta_1}, \hat{\beta_2}$ does exist (we'll see how to derive it next lecture). For now, however, let's see how R can be used to calculate $\hat{\beta_1}$ and $\hat{\beta_2}$ simultaneously:
+A closed form formula for $\hat{\beta_0}, \hat{\beta_1}, \hat{\beta_2}$ does exist (we'll see how to derive it next lecture). For now, however, let's see how R can be used to calculate $\hat{\beta_1}$ and $\hat{\beta_2}$ simultaneously:
 ```{r}
 mlr = lm(gas~tax+licenses, data=fuel)
 summary(mlr)
@@ -213,13 +213,55 @@ We see that since the p-value for this F-statistic is less than any reasonable $
 Recall that our alternate hypothesis stated that either $\beta_1 \neq 0$ or $\beta_2 \neq 0$. 
 Let's pretend for a second that this alternate hypothesis was not true (ie. that we accepted its corresponding $H_0$). Based on this, we decide to add 10 more variables to the dataset, giving us coefficients $\beta_1, \beta_2,...,\beta_{12}$. 
 
-*Just by chance*, there's a high probability that *at least one* of these 10 new variables has *some* correlation with $\y_i$ (recall that it's easy to find small correlations, even when there's no causal link).
+*Just by chance*, there's a high probability that *at least one* of these 10 new variables has *some* correlation with $y_i$ (recall that it's easy to find small correlations, even when there's no causal link).
 
 The way that we've set up $H_0$ and $H_A$, we've made it very difficult for $H_0$ to fit the data. Briefly: $H_A$ only has to get lucky once, **$H_0$ has to be lucky everytime**.
 
-This assymmetry causes the p-value of an F-Statistic to get very small as $k$ (the number of predictors) grows large. Thus for even moderate values of $k$, the $F-statistic$ might be considered to have an outsized false positive rate. There are ways to account for this (such as the [Bonferroni Correction](https://en.wikipedia.org/wiki/Bonferroni_correction)), but my opinion this property makes F-tests more trouble than they're worth.
+This asymmetry causes the p-value of an F-statistic to get very small as $k$ (the number of predictors) grows large. Thus for even moderate values of $k$, the $F-statistic$ might be considered to have an outsized false positive rate. There are ways to account for this (such as the [Bonferroni Correction](https://en.wikipedia.org/wiki/Bonferroni_correction)), but my opinion this property makes F-tests more trouble than they're worth.
 
 The practice of chucking more variables into your model in order to achieve significance is sometimes called "fishing", and is considered a type of p-hacking (techniques to manipulate a statistical procedure in order to get significance, and thereby score a publication or similar). P-hacking is considered unethical when done intentionally (you're effectively committing academic fraud), but can be easy to do by accident. Watch out for accidental p-hacking, lest you have to publish an embarassing retraction.
 
 # Hypothesis Testing - Individual Coefficients
-You will notice in the regression table, that R has assigned p-values to all the coefficients individually, not just the F-statistic for the whole model.
+You will notice that, in the regression table, R has assigned p-values to all the coefficients individually, not just the F-statistic for the whole model. How can we interpret these?
+
+Recall that we can think about MLR as a chain of regressions, each time regressing the residuals on the covariates. The p-values of these regressions are what is shown in the regression table (note that, due to the way R calculates the MLR coefficients vs SLR, the actual numerical values are slightly different):
+```{r}
+summary(resid.mod.licenses)
+summary(mlr)
+```
+
+That is (in this example), these p-values test between the following hypotheses:
+
+* $H_0$: $\beta_{\text{LICENSES}} = 0$, given that we've included $\text{TAX}$ in the model 
+* $H_A$: $\beta_{\text{LICENSES}} \neq 0$, given that we've included $\text{TAX}$ in the model
+
+# Centering and Scaling
+Looking coefficients in the regression table for our MLR, you might be tempted to conclude that $\text{TAX}$ has a huge effect on $\text{GAS}$, relative to $\text{LICENSES}$. This is not the case, since these variables have *very different units* ("cents per gallon" vs "thousands of people"). This makes it hard to compare between the coefficients in our MLR.
+
+One way that we can address this, is by converting all of our independent variables $x_i$ to the same (unitless) scale. That is, for a single observation $i$ of independent variable $j$, transforming it by:
+$$
+x'_{j,i} = \frac{x_{j,i} - \bar{x}}{s_x}
+$$ 
+Notice that now $E[x_{j,i}] = 0$ and $\text{Var}[x_{j,i}]=1$. The $x'_{j,i}$ are now all in *units of standard deviation*.
+
+Let's do this using R+tidyverse
+```{r}
+center.scale = function(x){
+  x.bar = mean(x)
+  s.x = sd(x)
+  return((x-x.bar)/s.x)
+}
+
+# dplyr's `mutate` function adds new variables to a dataframe
+fuel %<>% dplyr::mutate(
+  tax.scaled=center.scale(tax),
+  licenses.scaled=center.scale(licenses)
+  )
+
+mlr.scaled = lm(gas~tax.scaled+licenses.scaled, data=fuel)
+
+summary(mlr)
+summary(mlr.scaled)
+```
+
+Looking at the scaled model we see that the effect of $\text{LICENSES}$ is *two orders of magnitude* greater than the effect of $\text{TAX}$.
