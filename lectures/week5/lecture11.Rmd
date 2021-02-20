@@ -2,21 +2,237 @@
 title: "\"Lecture\" 11- Finalizing Linear Regression"
 author: "Peter Shaffery"
 date: "2/18/2021"
-output: html_document
+output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+#knitr::opts_chunk$set(echo = FALSE, results=FALSE, fig.show='hide')
 ```
 
-# 
+# Multiple Linear Regression
+
+## Introduction
+
+Today I'd like to walk through a multiple linear regression model for a completely new dataset. Together, we will work through the main stages of data analysis:
+
+1. *Exploratory data analysis (EDA):* understanding what's in the datasets, determining if any variable transforms are obviously needed 
+2. *Model Construction*
+  a. *Model selection:* Determining which variables to include in our model
+  b. *Model diagnostics:* Determine if our "first draft" model is any good, iterate on model selection and variable transforms accordingly
+3. *Final Regression:* Perform our final regression, put together some final conclusions, make predictions if needed
+
+
+This lecture will assume that you are following along at home with your own copy of the dataset. Please make sure that you download the `education.csv` dataset from Canvas before watching or reading through this lecture.
+
+## EDA
+For a working statistician or data scientist, it is often the case that the data under analysis was collected by someone else. While (in an ideal case) the data collector has direct input on the analysis, it is easy for both the collector and the statistician to overlook problems in the data that can seriously undermine the efficacy of a statistical analysis. Therefore, it's good practice to begin any analysis with an Exploratory Data Analysis (abbreviated EDA). The purpose of EDA is to familiarize yourself with the contents of the dataset, and to check for problems before modeling stage. Questions we should be asking ourselves at this point include:
+
+* What variables are available to model with?
+* What relationships do we expect to exist between these variables?
+* Are there any missing data points?
+* Are there any obvious problems with any variable (nonsense values, constant or near-constant values, collinearity)?
+
+The data that we will be working with includes information on per capita education spending by state, as well as several other state-level predictor variables. We will be looking to construct a model of education spending in order to forecast future spending levels, based on expected trends in the predictor variables.
+
+```{r, warning=FALSE, message=FALSE, echo=TRUE, results=TRUE, fig.show=TRUE}
+library(tidyverse)
+library(magrittr)
+library(broom)
+library(car)
+
+educ = read.csv('../../data/education.csv')
+educ %>% head
+
+# we don't need the wls.weights variable for now, so drop it
+educ %<>% select(-wls.weights)
+```
+
+The data columns are defined as follows:
+
+Variable | Definition
+--------|----------
+STATE| Two-letter state code
+EDUC| Per-capita education expenditure (USD per-cap)
+INCOME| Median personal income of state residents (USD) 
+YOUTH| Number of residents below the age of 18 (thousands of people)
+URBAN| Number of residents living in a Census-defined "urban area" (thousands of people)
+REGION| Census-defined region of the US
+GDP| Per-capita state gross product (USD per-cap)
+TAX| Per-capita income tax revenue (USD per-cap)
+
+We see that, aside from STATE and EDUC, the data contains two general types of variable: economic measures (INCOME, GDP, and TAX), and demographic measures (YOUTH, URBAN).
+
+Please try and answer the following questions. I'll give you a five minute head start and then will begin to work through my approach.
+
+1. Are there any missing data points?
+2. Which variables (if any) are collinear?
+
+### Missing Data Points
+This is a quick R one-liner:
+```{r}
+educ %>% is.na %>% any
+```
+### Collinearity
+```{r}
+# Already I know I want to exclude the STATE, it has very high cardinality and is redundant against REGION 
+mod.dat = educ %>% select(-state)
+
+cor(mod.dat)
+pairs(mod.dat) # looks like there may be some heteroskedasiticity...
+vif(lm(educ~.,data=mod.dat%>% mutate('region'=as.factor(region))))
+```
+
+### Conclusions
+The economic variables all exhibit some degree of correlation, which is reasonable (INCOME and TAX in particular, we should expect to the closely related overall). This suggests that we might be worried about how colinearity will impact our model However, looking at the VIF it doesn't appear to quite meet the threshold for automatic removal. Nevertheless, we might expect that during the model selection process at least one of these variables will likely be cut.
+
+## Model Selection and Diagnosis
+
+Now that we have some idea of what exists in our dataset, we're ready to begin modeling. As we have seen, modeling is generally done iteratively. That is, the analyst begins with some base model which acts as a starting point, and then makes changes to either the base model or the data in order to resolve issues with the regression or to improve the model performance.
+
+Whether your goal is inference or prediction, statistical modeling is never "automatic" and always requires the analyst to make decisions. It is therefore important to present your results **in the context of those decision** as much as possible.Presenting just the final regression table can be misleading when those numbers are the result of an iterative decision process.
+
+For this example, we have two goals. We would like to produce a model which will perform well predictively, and thus we need to choose our variables carefully. Furthermore, from the EDA we suspect that heteroskedasticity might be present. We therefore need to design our model to address both of these concerns, as well as be on the lookout for problems which didn't show up in the EDA. 
+
+Let's start by fitting a model which includes every variable (in R `educ ~ .`). Please use this model to answer the following questions. I'll give you a five minute head start and then will begin to work through my approach.
+
+1. What coefficients are significant? Do you trust those p-values?
+2. Which regression assumptions are met, and which are not met, by the data? 
+3. Are any outliers present in the data?
+
+### Checking Assumptions
+```{r}
+full.mod = lm(educ~., data=mod.dat)
+plot(full.mod)
+
+# Linearity: ok
+# Normality: ok
+# Homoskedasiticty: bad
+# outliers: datapoint 49 (Alaska)
+```
+
+### Outliers
+```{r}
+mod.dat = mod.dat[-49,]
+
+full.mod = lm(educ~., data=mod.dat%>%mutate('region'=as.factor(region)))
+summary(full.mod)
+plot(full.mod)
+
+# Heterskedasticity still present, but everything else looks good
+```
+
+## Intermezzo: Weighted Least Squares
+Last lecture we saw an example where we performed weighted least squares by writing the variance $\text{Var}[\epsilon_i]$ as a function of $x_i$ explicitly (we had said that $\text{Var}[\epsilon_i] = x_i^2$). This allowed us to calculate the data weights using this function. 
+
+In many cases, however, it is challenging to figure out the exact relationship between $\text{Var}[\epsilon_i]$ and the $x_{ij}$. Therefore, it is common practice to calculate weights by *binning* the data points by similar values of $x_{ij}$, and calculating the sample variance of the residuals within each bin. This is what we will do here.
+
+First, we need to pick a variable that we think drive the *most* heteroskedasticity. To do this, we will make another pairs plot but replace the dependent variable EDUC with the residuals from our full model. This will help us understand which variables cause the most dramatic heteroskedasticity in the final model:
+```{r, echo=TRUE, results=TRUE, fig.show='show'}
+mod.dat['resids'] = full.mod %>% augment %>% select('.resid')
+pairs(mod.dat%>%select(-educ))
+```
+We see grouping the data by REGION leads to *very* different values for $\text{Var}[\epsilon_i]$. We will therefore estimate residual variance at the REGION-level, and use this to calculate our model weights.
+
+```{r, echo=TRUE, results=TRUE, fig.show='show'}
+mod.dat %<>% group_by(region) %>%
+  mutate(wls.weights = 1/var(resids)) %>%
+  ungroup
+
+full.mod = lm(educ~youth+region+income+gdp+tax,
+              data=mod.dat%>%mutate('region'=as.factor(region)),
+              weights = wls.weights)
+summary(full.mod)
+plot(full.mod)
+```
+
+## Model Selection and Diagnosis (con't)
+
+Now that we have properly weighted our data points and the diagnostics look good, we can get started with our variable selection. In general, you want your model diagnostics to be correct *before* beginning variable selection, as problems like heteroskedasticity can negatively influence your model quality metric.
+
+Because our final goal is prediction, let's use the AIC to find a model which balances model fit with complexity. Models with too many variables can be *overfit*, that is their performance on the observed data will be substantially better than on out-of-sample data. We therefore are willing to sacrifice a little bit of a low in-sample error rate if it allows us to strike a variable. 
+
+Let's say that, through our domain knowledge in education policy, we know for sure that we want to include YOUTH in our model. Please use the AIC to answer the following questions. I'll give you a five minute head start before going through my solution:
+
+1. Which economic variable(s) (INCOME, TAX, and/or GDP, if any) should be included in the model?
+2. Which demographic variable(s) (URBAN and/or REGION, if any) should be included in the model?
+
+### Economic Variables
 
 ```{r}
-educ = read.csv('../../data/education_exp.csv')
-gdp = read.csv('../../data/gdp.csv')
-states = read.csv('../../data/state_codes.csv')
-names(states) %<>% tolower
+get.aic = function(m){ m %>% glance %>% select(AIC) %>% return }
+mod.dat$region %<>% as.factor
 
-gdp %<>% left_join(states, by = 'state')
-educ %<>% left_join(gdp[,c('code','gdp')],by=c('state'='code'))
+mod.none = lm(educ~youth,data=mod.dat,weight=wls.weights)
+mod.inc = lm(educ~youth+income,data=mod.dat,weight=wls.weights)
+mod.gdp = lm(educ~youth+gdp,data=mod.dat,weight=wls.weights)
+mod.tax = lm(educ~youth+tax,data=mod.dat,weight=wls.weights)
+mod.all.econ = lm(educ~youth+income+gdp+tax,data=mod.dat,weight=wls.weights)
+
+mod.none %>% get.aic
+mod.inc %>% get.aic
+mod.gdp %>% get.aic
+mod.tax %>% get.aic
+mod.all.econ %>% get.aic
 ```
+
+### Demographic Variables
+```{r}
+get.aic = function(m){ m %>% glance %>% select(AIC) %>% return }
+
+mod.none = lm(educ~youth+income,data=mod.dat,weight=wls.weights)
+mod.urb = lm(educ~youth+income+urban,data=mod.dat,weight=wls.weights)
+mod.reg = lm(educ~youth+income+region,data=mod.dat,weight=wls.weights)
+mod.both = lm(educ~youth+income+urban+region,data=mod.dat,weight=wls.weights)
+
+mod.none %>% get.aic
+mod.urb %>% get.aic
+mod.reg %>% get.aic
+mod.both %>% get.aic
+```
+
+### Conclusions
+Based on this we conclude that our best model if `educ~youth+income+reg`. Note that this result is really to our use of WLS. Look what happens if *don't* use the weights:
+```{r}
+mod.inc = lm(educ~youth+income,data=mod.dat)
+mod.all.econ = lm(educ~youth+income+gdp+tax,data=mod.dat)
+
+mod.inc %>% get.aic
+mod.all.econ %>% get.aic
+```
+We would have chosen an entirely different model! If we had done variable selection before model diagnostics, it would have been important to re-run the selection process after having accounted for the outliers and heteroskedasticity.
+
+## Final Regression
+Now that we've corrected our model assumption violations and chosen a model form, it's time to summarize our results. Besides giving you a paper to publish, reading through your results and translating them back into plain English (or other language) is an important final sanity-check to make sure nothing has gone wrong unnoticed. 
+
+Here you should be looking to answer questions like:
+
+* Which variables are the most important? Does this make sense?
+* Are any coefficient values particularly surprising or nonsensical?
+
+**NOTE:** this does *not* mean that you should try and "correct" a result that you do not like. Just because your scientific hypothesis was not confirmed doesn't mean that the result is nonsensical. Nevertheless, there are cases where ex. your regression results contradict a strongly established result. In these cases you should be extra careful that none of your diagnostic correction, outlier omissions, etc. are not solely responsible for this new result. You may have discovered something hitherto unknown! But you also may have just biffed your R code.
+
+Using the model `educ~youth+income` please answer the following question:
+
+1. How much variance is explained by your model?
+2. Which variable (YOUTH or INCOME) "matters more" to your model?
+
+### Variance Explained
+```{r}
+mod.final = lm(educ~youth+income+region, data=mod.dat, weights=wls.weights)
+mod.final %>% summary
+```
+
+### Variable Importance
+```{r}
+center.scale = function(x){ (x-mean(x))/sd(x) }
+mod.dat['educ.cs'] = center.scale(mod.dat$educ)
+mod.dat['youth.cs'] = center.scale(mod.dat$youth)
+mod.dat['income.cs'] = center.scale(mod.dat$income)
+
+mod.final.cs = lm(educ.cs~youth.cs+income.cs+region, data=mod.dat, weights=wls.weights)
+mod.final.cs %>% summary
+```
+
+### Conclusion
+We see here that INCOME is *three times* more influential on EDUC than YOUTH. Our model is saying that in the future we should expect changes in a state's median income to be the biggest drivers of changes in its educational spending.
