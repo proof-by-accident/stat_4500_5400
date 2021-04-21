@@ -1,6 +1,6 @@
 ---
 title: "Homework 1"
-output: pdf_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}

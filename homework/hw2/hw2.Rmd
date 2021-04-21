@@ -43,8 +43,8 @@ A national insurance organization wanted to study the consumption of cigarettes 
 | PRICE | Average price (in cents) of a pack of cigarettes in the state |
 | SALEs | Number of packs of cigarettes sold in a state per capita |
 
-a. Test the hypothesis that the variable FEMALE is not needed in the regression equation relating SALES to the six predictor variables
-b. Test the hypothesis that the variables FEMALE and HS are not needed in the above regression equation
+a. Test the hypothesis that the variable FEMALE is not needed in the regression equation relating SALES to the five predictor variables
+b. Determine whether the variables FEMALE and HS should be included in the above regression equation
 c. Compute that 95\% Confidence Interval for the true regression coefficient of the variable INCOME.
 d. What percentage of the variation in SALES can be accounted for by the three variables PRICE, AGE, and INCOME?
 e. Using an added variable plot, show the effect of including the INCOME variable
