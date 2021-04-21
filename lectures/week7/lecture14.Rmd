@@ -1,0 +1,363 @@
+---
+title: "Lecture 14- Binomial Regression"
+author: "Peter Shaffery"
+date: "3/2/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+
+## Example: Titanic dataset
+
+The Titanic dataset contains individual outcomes of about half the passangers aboard the famous Titanic- a passanger ship which sank in 1912. The dataset contains 1132 records, and includes a number of variables about each passenger as well as whether they surivived or not:
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(magrittr)
+
+dat = read.csv('../../data/titanic.csv')
+
+# the titanic data contains some missing data that we'll just ignore for now....
+dat %<>% drop_na
+
+# we don't care about a few of the columns
+dat %<>% select(-c('name','ticket','cabin'))
+
+dat %>% head
+dat$pclass %<>% as.factor 
+```
+
+Variable | Def'n
+-------:|:--------
+`survived` | Whether the passenger survived (1) or not (0)
+`pclass` | Passenger's ticket class (1 is "first class", etc.)
+`sex` | Passenger's sex 
+`age` | Passenger's age
+`sibsp` | Number of siblings and spouses aboard
+`parch` | Number of parents and children aboard
+`fare` | Price paid for ticket
+`embarked` | Port passenger boarded ship (C = Cherbourg, Q = Queenstown, S = Southampton)
+
+What characteristics predict if someone survived or not?
+
+## Logistic Regression
+
+One way we could start to answer this question is by modeling the survival outcome with a *Bernoulli distribution*. That is, we assume that for an individual passenger their survival $y_i$ is a random random variabl, with a probability $\pi_i$ that $y_i=1$ (and conversely a probability $(1-\pi_i)$ that $y_i=0$).  For a given passenger the PMF of this model is:
+
+$$
+y_i \sim \text{Bernoulli}(\pi_i) = \pi_i^{y_i} (1-\pi_i)^{(1-y_i)}
+$$
+
+Recall that the Bernoulli distribution is a special case of the Binomial distribution:
+
+$$
+y_i \sim \text{Binomial}(\pi_i) = {n_i \choose y_i } \pi_i^{y_i} (1-\pi_i)^{(n_i-y_i)}
+$$
+Where $n_i=1$. 
+
+The expected value of the Bernoulli distribution is:
+$$
+E[y_i] = \pi_i
+$$
+
+And thus we can make it a GLM using a model for $\pi_i$:
+
+$$
+g(\pi_i) = \vec{x_i}^T\vec{\beta}
+$$
+
+### A Weird Choice for $g$
+
+One choice for $g$ that sees some usage (for some reason), is a *linear probability model*, $\pi_i= \vec{x_i}^T\vec{\beta}$.
+
+This model has a few problems, but mainly we can get an estimate $\hat{\pi}_i$ which is less than 0 or greater than 1, so that's out. 
+
+A slightly more reasonable choice for $g$ would be model which is linear inside $[0,1]$, but constant otherwise. Something like:
+```{r, echo=FALSE}
+g = function(x){
+  if ((x>0) & (x<1)){
+    return(x)
+  }
+  else if (x<=0) {
+    return(0)
+  }
+  else {
+    return(1)
+  }
+}
+
+grid = seq(-1,2,.01)
+plot(grid,sapply(grid,g),type='l',xlab='x',ylab='g(x)')
+
+```
+
+This type of model sees some usage in dose-response modeling (see IGLM 7.3)
+
+### A Nicer Choice for $g$
+
+Rather than trying to model $\pi_i$ directly, we might observe that the *natural parameter* for the Binomial distribution is a much easier candidate to model:
+$$
+b(\pi_i) = \log{\left( \frac{\pi_i}{1-\pi_i} \right)}
+$$
+Certainly this quantity can be positive or negative, which was the primary difficulty we had modeling $\pi$ directly.
+
+Hence a common choice of linke function is simply:
+$$
+g(\pi_i) = b(\pi_i) = \log{\left( \frac{\pi_i}{1-\pi_i} \right)}
+$$
+
+This function is named the **logit** function, $g(z) = \log{\left( \frac{z}{1-z} \right)} = \text{logit}(z)$.
+
+Combined, the choice of Bernoulli (or Binomial) distribution and logit link function is known as **logistic regression**. Often this model is expressed in terms of the *inverse* logit, or **logistic** function:
+
+$$
+\pi_i = \text{logistic}(\vec{x}_i^T \vec{\beta}) = \frac{\exp{(\vec{x}_i^T \vec{\beta})} }{1+\exp{(\vec{x}_i^T \vec{\beta})}}
+$$
+**Take a minute and write down the log-likelihood for this choice of distribution and link function**
+
+Writing.
+
+Writing..
+
+Writing...
+
+For a single datapoint we said that $y_i \sim \pi_i^{y_i} (1-\pi)^{1-y_i}$, hence the log-likelihood for the entire dataset (in terms of $\pi_i$) is:
+
+$$
+l(\pi_i) = \sum_i y_i \log\pi_i + (1-y_i) \log(1-\pi_i)
+$$
+
+Now, subbing in $\pi_i = \frac{\exp{(\vec{x}_i^T \vec{\beta})} }{1+\exp{(\vec{x}_i^T \vec{\beta})}}$ gives us:
+
+$$
+l(\vec{\beta}) = \sum_i y_i \log{\left(\frac{\exp{(\vec{x}_i^T \vec{\beta})} }{1+\exp{(\vec{x}_i^T \vec{\beta})}} \right)} + (1-y_i) \log{\left( \frac{1}{1+\exp{(\vec{x}_i^T \vec{\beta})}} \right)}
+$$
+
+Which can be simplified to:
+$$
+l(\vec{\beta}) = \sum_i y_i (\vec{x}_i^T \vec{\beta} ) - \log{(1+\exp{(\vec{x}_i^T \vec{\beta})})}
+$$
+### Interpreting Logistic Regression
+
+Say that we have a simple model with only one variable $x_i$:
+$$
+\log{\left( \frac{\pi_i}{1-\pi_i} \right)} = \beta_0 + \beta_1 x_i
+$$
+How do we interpet the effect of increasing $x_i$ by 1 unit?
+
+The typical way of interpreting the coefficient $\beta_1$ is through the **odds ratio**. If we imagine one individual (say a passenger in the Titanic dataset) with variable value $x$, and another with variable $x+1$, then the odds ratio is defined:
+
+$$
+\begin{split}
+\text{OR} &= \frac{ \text{odds}(x+1) }{\text{odds}(x)} \\
+&= \frac{\pi(x+1)/(1-\pi(x+1))}{ \pi(x)/(1-\pi(x))}\\
+&= \frac{\exp{(\beta_0 + \beta_1(x+1))}}{\exp{(\beta_0 + \beta_1 x)}}\\
+&= \exp \beta_1\\
+\end{split}
+$$
+For a model with multiple variables:
+$$
+\log{\frac{\pi_i}{1-\pi_i}} = \beta_0 + \beta_1 x_{1i} + ... + \beta_m x_{mi}
+$$
+We could define multiple such odds ratios:
+$$
+OR_m = \exp{\beta_m}
+$$
+
+## Example: Titanic (con't)
+
+Let's run a simple model on `pclass`, `age`:
+```{r}
+mod = glm(survived ~ pclass+age, family=binomial, data=dat)
+summary(mod)
+
+print('Odds ratios:')
+print(exp(mod$coefficients))
+```
+**Note that these ORs are not probabilities**. Only the `(Intercept)` OR can be interpreted as "true odds", since it gives you the odds of "success" (or survival) for the "base class* in our model. The OR corresponding to any variable *modifies* the odds.
+
+Hence for a younger passenger in first class the survival odds were just under 8 to 1. For the same passenger in second class those odds were reduced to $.29 * 7.87 \approx 2.3$, so about 2 to 1. The same passenger in third class had survival odds $.1*7.87 \approx .79$ so roughly 4 to 3 *against*. Every additional year on a passenger's age knocked \~4\% off their survival odds.
+
+# Binomially Distributed Data
+
+In the above example, it was easy to think about each passenger as an individual *Bernoulli trial*, and so assuming $n_i=1$ was a natural choice.
+
+In many cases, however, logistic regression is applied to Binomial data with $n_i > 1$
+
+In general, logistic regression doesn't care whether our data has $n_i=1$ or not, but it's instructive to look at an example. Let's see a case from dose-response modeling (IGLM 7.3.1). 
+
+Say that we are trying to determine the properties of carbon disulphide, a gaseous insectiside, on a certain species of beetle. The following data shows the number of beetles dead after five hours of exposure:
+
+```{r}
+dose.dat = read.csv('../../data/beetles.csv')
+dose.dat
+```
+
+From the Binomial PMF, we can quickly see that the likelihood function for this data (in terms of $\pi_i$) is:
+$$
+l(\pi_i;n_i) = \sum_i y_i \log\pi_i + (n_i-y_i) \log(1-\pi_i) + \log{{n_i \choose y_i}}
+$$
+Note that the last term ${n_i \choose y_i}$ does not depend on $\pi_i$ and hence will not depend on $\vec{\beta}$, so the only part we care about is:
+$$
+ \sum_i y_i \log\pi_i + (n_i-y_i) \log(1-\pi_i)
+$$
+Now say that instead of a Binomial distribution we had instead treated each beetle's outcome $z_j$ as a Bernoulli trial:
+$$
+ \sum_j z_j \log\pi_j + (1-z_j) \log(1-\pi_j)
+$$
+Since we can group the $n_i$ individuals at each dose level, $x_j = x_i$:
+$$
+\begin{split}
+&\sum_i \left(\sum_{j=1}^{n_i} z_j\right) \log\pi_i + \left(\sum_{j=1}^{n_i} 1-z_j \right) \log(1-\pi_i) \\
+ &= \sum_i y_i \log\pi_i + (n_i - y_i) \log(1-\pi_i) \\
+\end{split}
+$$
+So when we take the derivative and compute the score function we will get the same thing, regardless of how we modeled.
+
+Unfortunately, `glm` has a **ludicrous** usage pattern for fitting this kind of "grouped" binomial data (ie. data where $n_i>1$). You need to construct a matrix with two columns, where the first contains the $y_i$ (number of successes), while the second contains $n_i-y_i$ (the number of failures). This looks like:
+```{r}
+dose.dat$fails = dose.dat$n - dose.dat$y
+lhs = as.matrix(dose.dat[,c('y','fails')])
+
+mod.logit = glm(lhs~dose.dat$dose, family=binomial)
+summary(mod.logit)
+
+plot(dose.dat$dose,dose.dat$y/dose.dat$n,xlab='Dose',ylab='y/n')
+# note the type='response', which is special for GLMS and produces predictions on the $[y_i] scale
+lines(dose.dat$dose,predict(mod.logit, type='response'),col='red')  
+
+print('Odds ratios:')
+exp(mod.logit$coefficients)
+```
+
+# Alternate Link Functions
+Let's look at a few other common link functions. First up is the probit model:
+
+$$
+\Phi^{-1}(\pi_i) = \vec{x}_i^T \vec{\beta}
+$$
+The function $\Phi$ is the CDF of the standard normal distribution:
+$$
+\begin{split}
+X &\sim N(0,1)\\
+\Phi(x) &= Pr[X \leq X| \mu=0, \sigma^2=1]
+\end{split}
+$$
+Since $\pi_i = \Phi(\vec{x}_i^T \vec{\beta})$ it is guaranteed to stay in $[0,1]$ (since it's a probability).
+
+In general, the probit and logit functions operate *very* similarly as link functions:
+
+```{r}
+mod.probit = glm(lhs~dose.dat$dose, family=binomial(link='probit'))
+summary(mod.probit)
+
+plot(dose.dat$dose,dose.dat$y/dose.dat$n,xlab='Dose',ylab='y/n')
+lines(dose.dat$dose,predict(mod.logit, type='response'),col='red') 
+lines(dose.dat$dose,predict(mod.probit, type='response'),col='blue') 
+
+```
+
+Note that even though the coefficients are markedly different, the ultimate predictions are basically the same. Almost always there will be no difference between a logit and a probit model, except a logit model can be interpreted in terms of log-odds and a probit cannot.
+
+Note that, when the coefficient values are set equal, the probit model is slightly steeper:
+```{r}
+xgrid = seq(-10,10,.01)
+logit = exp(xgrid)/(1+exp(xgrid))
+probit = pnorm(xgrid)
+
+plot(xgrid,probit,col='blue',type='l',xlab='x',ylab='')
+lines(xgrid,logit,col='red')
+legend('topleft',col=c('red','blue'),lwd=1,legend=c('logit','probit'))
+```
+
+So this might matter to you (but it probably won't).
+
+Slightly different from logit and probit is the **complementary log-log$ link function:
+
+$$
+\log{(-\log{(1-\pi_i)} )} = \vec{x}_i^T \vec{\beta}
+$$
+This is referred to in IGLM as the "extreme value model", as it can be interpreted as the CDF of the extreme value distribution.
+
+While both the logit and probit models are symmetric about $ \vec{x}_i^T \vec{\beta}=0$:
+$$
+\begin{split}
+\text{logit}(\pi_i) &= -\text{logit}(1-\pi_i) \\
+\text{probit}(\pi_i) &= -\text{probit}(1-\pi_i) \\
+\end{split}
+$$
+This is not true for the complementary log-log link function, which allows a little assymetry:
+
+```{r}
+xgrid = seq(-10,10,.01)
+cll = 1-exp(-exp(xgrid))
+
+plot(xgrid,logit,col='red',type='l',xlab='x',ylab='')
+lines(xgrid,probit,col='blue')
+lines(xgrid,cll,col='green')
+legend('topleft',col=c('red','blue','green'),lwd=1,legend=c('logit','probit','CLL'))
+
+mod.cll = glm(lhs~dose.dat$dose, family=binomial(link='cloglog'))
+summary(mod.cll)
+
+plot(dose.dat$dose,dose.dat$y/dose.dat$n,xlab='Dose',ylab='y/n')
+lines(dose.dat$dose,predict(mod.logit, type='response'),col='red') 
+lines(dose.dat$dose,predict(mod.probit, type='response'),col='blue') 
+lines(dose.dat$dose,predict(mod.cll, type='response'),col='green') 
+
+```
+
+
+# Model Assessment: Pseudo-$R^2$
+
+Recall that, for linear regression we could compute the fraction variance explained:
+
+$$
+R^2 = 1 - \frac{\sum(y_i-\hat{y}_i)^2}{\sum(y_i-\bar{y}_i)^2}
+$$
+In logistic regression there are some analagous quantities.
+
+The first is Effron's $R^2$:
+$$
+R^2 = 1 - \frac{\sum(y_i-\hat{\pi}_i)^2}{\sum(y_i-\bar{y}_i)^2}
+$$
+
+For example, for our Age+Ticket class model we have:
+```{r}
+mod = glm(survived ~ pclass+age, family=binomial, data=dat)
+
+pi.hat = predict(mod,type='response')
+R2.effrons = 1 - (sum((dat$survived-pi.hat)^2)/sum((dat$survived-mean(dat$survived))^2))
+R2.effrons
+```
+
+Another option is McFadden's $R^2$, which is percent improvement over a *null model* (ie. only the intercept):
+$$
+R^2 = 1 - \frac{\log L}{\log L_0}
+$$
+Where $L$ is the model likelihood and $L_0$ is the null model likelihood. This choice of $R^2$ works because the likelihood for a binomial model $L \in [0,1]$ (since it's just the product of a bunch of probabilities), hence the largest possible value of $\log L$ is $0$ (when $L=1$).
+
+Let's use the McFadden's $R^2$ to see which link function best fits the beetle dose-response:
+```{r}
+mod0 = glm(lhs~1, family=binomial, data=dose.dat)
+
+ll0 = logLik(mod0)
+ll.logit = logLik(mod.logit)
+ll.probit = logLik(mod.probit)
+ll.cll = logLik(mod.cll)
+
+
+print(c(1-ll.logit/ll0, 1-ll.probit/ll0, 1-ll.cll/ll0) )
+
+plot(dose.dat$dose,dose.dat$y/dose.dat$n,xlab='Dose',ylab='y/n')
+lines(dose.dat$dose,predict(mod.logit, type='response'),col='red') 
+lines(dose.dat$dose,predict(mod.probit, type='response'),col='blue') 
+lines(dose.dat$dose,predict(mod.cll, type='response'),col='green') 
+
+
+```
+
+We see that the assymetry allowed by the complementary log-log link function fits the data somewhat better than either the logit or probit models.

@@ -1,0 +1,278 @@
+---
+title: "Lecture 15- Deviance and Model Selection"
+author: "Peter Shaffery"
+date: "3/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Wald Testing
+Two lectures ago we looked at the sampling distribution for $\hat{\beta}$, and showed that it was asymptotically normal, with mean $\vec{\beta}^*$ (the true parameter vector). Based on this we could, in principal, calculate the standard error $\text{s.e.}(\hat{\beta})$.
+
+For the hypothesis $H_0: \beta_j = 0$ we can calculate the test statistic:
+$$
+z_j = \frac{\hat{\beta}_j}{\text{s.e.}(\hat{\beta}_j)}
+$$
+Allowing us to compute a p-value, testing whether or not a single variable "belongs" in a model, given every other coefficient in the model. 
+
+This is known as a **Wald test**, and by default R computes it in the `glm` regression table (as we have seen).
+
+But what if we want to determine whether to include *multiple* variables in a model. For linear regression we could use tools like Mallow's $C_p$ or the adjusted $R^2$ to determine whether the added variables were "worth it", from a predictive perspective. One thing we didn't mention then, however (which did accidently pop up in Hwk 2...) is that we can *also* formulate this problem as a hypothesis test.
+
+# Deviance
+Last lecture we saw a few ways that we could determine model fit, including McFadden's $R^2$:
+
+$$
+R^1 = 1- \frac{\log{L}}{\log{L_0}}
+$$
+
+This worked okay, but it was unclear what a "good" value of this $R^2$ was. Obviously "large" is good, but how large?
+
+A conceptually similar quantity, which will allow us to answer this question, is the **likelihood ratio statistic**
+
+$$
+\lambda = \frac{L(\vec{\beta}_{\text{max}})}{L(\hat{\beta})}
+$$
+Here we are comparing the likelihood of the MLE model $L(\hat{\beta})$ to the likelihood of a *saturated* model $L(\vec{\beta}_{\text{max}})$, rather than a null model $L_0$.
+
+The saturated model is "largest" possible model with the same link function and distribution as the MLE model. If we have $n$ observations $y_i$, then the largest possible model assigns a parameter to each $y_i$, ie. it is the model with $n$ parameters. It is not possible to fit a model with more than $n$ parameters (the problem will be *underconstrained*).
+
+Rather than working with $\lambda$ directly, it is much more common to deal with its logarithm:
+$$
+\log \lambda = l(\beta_{\text{max}}) - l(\hat{\beta})
+$$
+When $\log \lambda$ is large and positive it indicates that $\hat{\beta}$ is doing a relatively poor job fitting the data, relative to a more complex model.
+
+A really nice fact about $\log \lambda$ is that we can actually derive its sampling distribution (after a little scaling), using our knowledge of the sampling distribution of $\hat{\beta}$. When $n$ is large:
+$$
+2 \log \lambda \rightarrow \chi^2(p-m,v)
+$$
+Where $p$ is the number of parameters in $\beta_{\text{max}}$ (often $p=n$) and $m$ is the number of parameters in $\hat{\beta}$. $v$ is a *non-centrality* parameter which will be $0$ if $\hat{\beta}$ is almost as good as $\beta_{\text{max}}$.
+
+Knowing the sampling distribution $2 \log \lambda$ will be useful for performing hypothesis testing with basically any GLM (as will see shortly). Because of this, we give $D = 2 \log \lambda$ the special name of *Deviance*.
+
+## Derivation of the Deviance Sampling Distribution
+
+Let $\vec{\beta}^*$ and $\vec{\beta}_{\text{max}}^*$ denote the *true* parameter values of $\hat{\beta}$ and $\beta_{\text{max}}$ respectively. For each of these quantities, observe that we can use a Taylor approximation to write:
+$$
+\begin{split}
+2\left(l(\hat{\beta}) - l(\vec{\beta}^*) \right) & \approx (\vec{\beta}^* - \hat{\beta})^T J(\hat{\beta}) (\vec{\beta}^* - \hat{\beta})\\
+2\left(l(\beta_{\text{max}}) - l(\vec{\beta}^*_{\text{max}}) \right) & \approx (\vec{\beta}^*_{\text{max}} - \beta_{\text{max}})^T J(\beta_\text{max}) (\vec{\beta}^*_{\text{max}} - \beta_{\text{max}})\\
+\end{split}
+$$
+Here $J(\hat{\beta})$ is a matrix of second derivatives:
+
+$$
+J(\hat{\beta}) = \left[
+\begin{array}{ccc}
+\frac{d^2 l}{d\beta_1^2} & ... & \frac{d^2 l}{d\beta_1 d\beta_m}\\
+\vdots & \ddots & \vdots\\
+\frac{d^2 l}{d\beta_m d\beta_1} & ... & \frac{d^2 l}{d\beta_m^2}\\
+\end{array}
+\right]
+$$
+Which plays the same role in the variance of the vector valued $\hat{\beta}$ as the scalar second derivative did for $\beta_1$.
+
+Since $\hat{\beta}$ is asymptotically normal, it can be shown that:
+$$
+\begin{split}
+2\left(l(\hat{\beta}) - l(\vec{\beta}^*) \right) & \approx (\vec{\beta}^* - \hat{\beta})^T J(\hat{\beta}) (\vec{\beta}^* - \hat{\beta}) \rightarrow \chi^2(m)\\
+2\left(l(\beta_{\text{max}}) - l(\vec{\beta}^*_{\text{max}}) \right) & \approx (\vec{\beta}^*_{\text{max}} - \beta_{\text{max}})^T J(\beta_\text{max}) (\vec{\beta}^*_{\text{max}} - \beta_{\text{max}}) \rightarrow \chi^2(p)\\
+\end{split}
+$$
+Now, this is not exactly the form of the deviance, but it's close. A little algebra gives us:
+$$
+\begin{split}
+D &= 2\left( l(\beta_{\text{max}}) - l(\hat{\beta}) \right)\\
+&= 2\left(l(\beta_{\text{max}}) - l(\vec{\beta}^*_{\text{max}}) \right) - 2\left(l(\hat{\beta}) - l(\vec{\beta}^*) \right) + 2\left(l(\beta_{\text{max}}^*) - l(\vec{\beta}^*) \right)  \\
+\end{split}
+$$
+A neat property of $\chi^2$ random variables is, if:
+$$
+\begin{split}
+X &\sim \chi^2(a)\\
+Y &\sim \chi^2(b)\\
+\end{split}
+$$
+With $a>b$, then $X-Y \sim \chi^2(a-b)$. Moreover, if we introduce a constant $c$, then $X + c \sim \chi^2(a,c)$, which we refer to as a **non-central* $\chi^2$ distribution.
+
+We therefore have that:
+$$
+D \rightarrow \chi^2(p-m,v)
+$$
+Where the centrality parameter $v = 2\left(l(\beta_{\text{max}}^*) - l(\vec{\beta}^*) \right)$. Hence, when $\hat{\beta}$ and $\beta_{\text{max}}$ are nearly equal in performance $v \approx 0$.
+
+
+## Hypothesis Testing with Deviance
+
+Say that we have two parameter vectors $\vec{\beta}_0 = [\beta_1,...,\beta_k]^T$ and $\vec{\beta}_1 = [\beta_1,...,\beta_m]^T$. We see that the models represented by these vectors are **nested** if every element of $\beta_0$ is an element of $\beta_1$. In this case, we can think of $\vec{\beta}_0$ as a *sub-model* of $\vec{\beta}_1$. Denote the corresponding models by $M_0$ and $M_1$.
+
+Deviance hypothesis testing allows us to pick between $M_0$ and $M_1$:
+
+1. $H_0:$ model $M_0$ is "correct" (ie. parameters $\beta_{k+1}=...=\beta_m=0$)
+2. $H_A:$ model $M_1$ is correct (ie. at least one of the parameters $\beta_{k+1},...,\beta_m$ are not equal to 0)
+
+The way we can compare between these hypotheses is through the *difference* in model deviances. Let $D_i$ correspond to the model deviace of $M_i$, and then define:
+$$
+\begin{split}
+\Delta D = D_0 - D_1\\
+= 2\left( l(\hat{\beta}_1) - l(\hat{\beta}_0) \right)
+\end{split}
+$$
+
+Now, there are two cases that we care about:
+
+### Case 1- Both models perform equally well
+
+If both models perform equally well relative to $\beta_{\text{max}}$, then both $v_0$ and $v_1$ will be approximately 0, and hence:
+$$
+\begin{split}
+D_0 &\sim \chi^2(n-k)\\
+D_1 &\sim \chi^2(n-m)\\
+\Delta D &\sim \chi^2(m-k)\\
+\end{split}
+$$
+Now, if $\vec{\beta}_0$ and $\vec{\beta}_1$ are equally performant, we should prefer $\vec{\beta}_0$ since it is the simpler model (this is sometimes called the *principal of parsimony*). Hence if the actual value of $\Delta D$ is consistent with the distribution $\chi^2(m-k)$ then we fail to reject $H_0$.
+
+### Case 2- $M_0$ is worse than $M_1$
+
+If $M_0$ performs *worse* than $\beta_{\text{max}}$ then $v_0$ will be greater than 0. This will result in a value of $\Delta D$ that is **larger** than would be expected under $\chi^2(m-k)$. Hence if $\Delta D$ lies in the upper tails of $\chi^2(m-k)$ then we reject $H_0$ in favor of $H_1$.
+
+### Putting it All Together
+We therefore have the following procedure for performing a hypothesis between $M_0$ and $M_1$:
+
+1. Choose a significance level $\alpha$
+2. Compute $\Delta D$
+3. If $Pr[X\geq \Delta D] \leq \alpha$ for $X \sim \chi^2(m-k)$ then reject $H_0$. Otherwise fail to reject $H_0$.
+
+
+## Example: Titanic dataset
+
+The Titanic dataset contains individual outcomes of about half the passangers aboard the famous Titanic- a passanger ship which sank in 1912. The dataset contains 1132 records, and includes a number of variables about each passenger as well as whether they survived or not:
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(magrittr)
+
+dat = read.csv('../../data/titanic.csv')
+
+# the titanic data contains some missing data that we'll just ignore for now....
+dat %<>% drop_na
+
+# we don't care about a few of the columns
+dat %<>% select(-c('name','ticket','cabin'))
+
+dat %>% head
+dat$pclass %<>% as.factor 
+```
+
+Let's use a deviance hypothesis test at $\alpha=.95$ to compare two models:
+
+1. $M_0$: a model which includes PCLASS, SEX, and AGE
+2. $M_1$: a model which includes PCLASS, SEX, AGE, SIBSP, and PARCH
+
+```{r}
+k = 3
+m = 5
+alpha = .95
+
+mod0 = glm(survived~pclass+age+sex, family=binomial, data=dat)
+mod1 = glm(survived~pclass+age+sex+sibsp+parch, family=binomial, data=dat)
+
+D0 = mod0$deviance
+D1 = mod1$deviance
+
+delta.D = D0 - D1
+p = pchisq(delta.D, m-k, lower.tail=FALSE)
+print(p)
+```
+
+Where therefore reject $M_0$ in favor of $M_1$!
+
+Importantly, be aware that this does not mean that **every** variable in $M_1$ is important, look at the summary table:
+```{r}
+summary(mod1)
+```
+Based on this it would appear that just SIBSP is significant. 
+
+# Deviance Testing for Linear Regression
+
+The calculations that we performed to get the distribution of $\Delta D$ hold for any GLM. However, depending on your choice of model you may not be able to compute $l(\hat{beta})$ directly.
+
+## Binomial Deviance
+
+For a binomial model we can see that computing $D$ is straightforward. 
+
+Say that we have observations $(\vec{x}_i, y_i, n_i)$ where $y_i$ is the number of "successes" in $n_i$ trials. Let $\hat{\pi}_i = \text{logit}^{-1}(\vec{x}_i^T \hat{\beta})$. We therefore have that:
+
+$$
+l(\hat{\beta}) = \sum_i y_i \log \hat{\pi_i} + (n_i - y_i) \log{(1-\hat{\pi}_i)} + \log {n_i \choose y_i}
+$$
+Now, for binomial regression that saturated model is the model where we estimate each $\pi_i$ with the observed success rate $\frac{y_i}{n_i}$, hence:
+$$
+l(\beta_{\text{max}}) \sum_i y_i \log \frac{y_i}{n_i} + (n_i - y_i) \log{(1-\frac{y_i}{n_i})} + \log {n_i \choose y_i}
+$$
+Once we have computed the MLE $\hat{\beta}$, we can compute $D = l(\beta_{\text{max}}) - l(\hat{\beta})$, which simplifies to:
+
+$$
+D = 2 \sum \left[ y_i \log \frac{y_i}{n_i \hat{\pi_i}} + (n_i -y_i) \log \frac{n_i-y_i}{n_i (1-\hat{\pi}_i)} \right]
+$$
+
+Notice that for this model the Deviance can be calculated using only quantities which we have directly observed. There is nothing else we need to estimate, beyond $\hat{\beta}$.
+
+## Normal Deviance
+
+This is not the case for the normal distribution. Say that we have computed an MLE $\hat{\beta}$, and would now like that compute $l(\hat{\beta})$:
+
+You may recall that the normal log-likelihood for the MLE is:
+$$
+l(\hat{\beta}) = \frac{-1}{2 \sigma^2} \sum(y_i - \vec{x_i}^T \hat{\beta})^2 - \frac{1}{2}N\log(2\pi\sigma^2)
+$$
+(We originally just ignored the $\frac{1}{2}N\log(2\pi\sigma^2)$ since it didn't involved $\vec{\beta}$, but here it will make a difference.)
+
+Now, the saturated model for linear regression assigns each $y_i$ it's own mean value $\mu_i$. It's not hard to convince yourself that the "best-fitting" saturated model would therefore just set $\mu_i = y_i$, which gives us:
+
+$$
+l(\beta_{\text{max}}) = \frac{1}{2}N\log(2\pi\sigma^2)
+$$
+
+The deviance for the normal model is therefore:
+$$
+D = \frac{-1}{2 \sigma^2} \sum(y_i - \vec{x_i}^T \hat{\beta})^2
+$$
+
+Unfortunately, we cannot compute this directly, since it depends on $\sigma^2$. Instead, we need to *estimate* the deviance using an estimate for $\sigma^2$. The usual estimator is (as we have seen):
+$$
+\hat{\sigma}^2 = \frac{\sum_i\hat{\epsilon}_i^2}{N-m}
+$$
+
+Where $\hat{\epsilon}_i$ are the model residuals.
+
+For a normal model, $D$ itself is actually *exactly* $\chi^2$ distributed. However, the estimator:
+$$
+\hat{D} = \frac{-1}{2 \hat{\sigma}^2} \sum(y_i - \vec{x_i}^T \hat{\beta})^2
+$$
+
+Is not $\chi^2$. Instead, since both the numerator and the denominator are $\chi^2$, $\hat{D}$ actually has an F-distribution. Therefore, deviance hypothesis testing for linear regression takes the form of an *F-test* (see RABE 3.10.2, or IGLM Ch. 6).
+
+# Akaike Information Criterion
+
+Now, it is often the case that we want to compare between *non-nested* models. We can no longer use a deviance test in this case. Instead, we turn to the Akaike Inforamtion Criterion (AIC). This quantity is defined:
+
+$$
+\text{AIC} = -2 l(\hat{\beta}) + 2m
+$$
+
+Note the relationship to deviance:
+$$
+AIC = D - 2 l(\beta_{\text{max}}) + 2m
+$$
+If we're comparing multiple models using the AIC, then we really only care about $\Delta \text{AIC} = \text{AIC}_1 - \text{AIC}_2$. For both models the $- 2 l(\beta_{\text{max}})$ term will be the same, so we see that:
+
+$$
+\Delta \text{AIC} = (D_1 - D_2) + 2(m_1 - m_2) = \Delta D + 2\Delta m
+$$
+
+So using AIC to pick between models is fundamentally the same "kind" of comparison as Deviance, except we're penalizing for the difference in model complexity $\Delta p$.

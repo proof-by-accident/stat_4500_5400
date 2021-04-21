@@ -1,0 +1,268 @@
+---
+title: "Lecture 25"
+author: "Peter Shaffery"
+date: "4/20/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+# Suggested References
+
+If you've enjoyed the overview of Bayesian statistics given in the last few lectures, I encourage you to check out some more complete references. For an in-depth, but still "entry level" text check out *Statistical Rethinking* by Richard McElreath. For a more advanced discussion of Bayesian theory I recommend *Bayesian Data Analysis (3rd Edition)* by Andrew Gelman. Both are available as e-books from the CU Boulder library.
+
+# Bayesian Logistic Regression
+
+The Bayesian approach to GLMs is more less what you would expect, given what we've seen with linear regression. Let's look at performing a Bayesian logistic regression using the titanic dataset.
+
+Recall that, with this dataset, the outcome of interest $y_i=1$ indicates passenger survival. The liklihood for this model is:
+
+$$
+L(\vec \beta; y_i, \vec x_i) = \prod_{i=1}^n \left[ \text{logit}^{-1}(\vec x_i^T \vec \beta) \right]^{y_i} \left[ 1-\text{logit}^{-1}(\vec x_i^T \vec \beta) \right]^{1-y_i}
+$$
+## Choosing Priors
+
+Now, one way that logistic regression *does* differ from linear regression is in the choice of priors, because we have to be a little careful if we choose priors which are too wide.
+
+For an example, say that we would like to fit the model:
+
+$$
+y_i \sim \text{Bernoulli}( \text{logit}^{-1}(\beta x_i ))
+$$
+Where $\beta$ and $x_i$ are both scalars. Let's place a normal prior on $\beta$, and look how that prior transforms to the probability scale $\pi = \text{logit}^{-1}(\beta x_i)$ when $x_i=1$:
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(reshape2)
+library(rstanarm)
+
+inv.logit = function(x){ 1/(1+exp(-x)) }
+
+prior1 = rnorm(1000,0,1e3) %>% inv.logit
+prior2 = rnorm(1000,0,1e1) %>% inv.logit
+prior3 = rnorm(1000,0,2.5) %>% inv.logit # the default normal prior used by rstanarm
+
+plt.df = data.frame(prior1, prior2, prior3) %>% melt
+
+ggplot(plt.df, aes(x=value,fill=variable)) +
+  geom_histogram(position='identity',alpha=.3)
+```
+
+Looking at the histogram, we see that a supposedly "uninformative" prior over $\beta$ turns out to be *highly* informative for $\pi_i$. The problem here is that $\beta$ is unbounded, but $\pi_i$ is not: large positive values of $\beta$ get mapped to $\pi_i \approx 1$, and large negative values get mapped to $\pi_i \approx =0$. If our prior tails are too heavy, favoring large values of $\beta$ (relative to the scale of $x_i$!) then this will produce a prior over $\pi_i$ that favors only 0 and 1. Depending on your data (particularly how many observations you have), this can strongly impact your priors.
+
+
+## Fitting
+As you might expect, `rstanarm` also provides functions for fitting Bayesian GLMs:
+
+```{r}
+dat = read.csv('../../data/titanic.csv') %>% drop_na
+dat$pclass %<>% as.factor()
+dat %>% head
+
+mod = stan_glm(survived~pclass+sex+age+sibsp+parch+fare, data=dat, family=binomial, prior=normal(location=0,scale=2.5), refresh=0) # rstanarm auto-scales independent variables to have unit variance, and then converts the coefficient estimates back to the original scale 
+summary(mod)
+plot(mod)
+```
+
+
+# Model Selection
+
+Bayesian statistics has a couple of tools available for comparing models. 
+
+## Bayes Factors
+
+**Caveat:** Bayes Factors are nice if you're trying to make Bayesian statistics look like Frequentist statistics, but in practice they are not popular outside of some niche cases. Presented here for completness more than "best practice".
+
+One of the oldest Bayesian model comparison tools are Bayes Factors. The idea here is a little self-referential: we're going to apply Bayes theorem to our choice of *models*, as well as our choice of parameters.
+
+Say that we have two models $M_1$ and $M_2$, which we want to compare. These models can theoretically be anything (non-nested, different distributions, etc.) so long as both posteriors are **proper**, ie. integrable. Each model includes a parameter (vector) $\theta_1$ and $\theta_2$, but note that the model is defined by the parameters plus everything else (choice of prior, choice of likelihood function form, etc.) so $\theta_i$  
+
+Before we've observed any data, we have prior beliefs $P[M_1]$ and $P[M_2]$ that each model is "correct". Now, say that we observe some set of data denoted $D$. We would like to compute the posterior probability:
+
+$$
+P[M_i|D] = P[D|M_i]P[M_i]
+$$
+
+But how can we compute $P[D|M_i]$? It turns out to actually be a quantity that we're already familiar with:
+
+$$
+P[D|M_i] = \int P[\theta_i|D,M_i] P[\theta_i|M_i] d \theta_i
+$$
+Where $\theta_i$ is the parameter (vector) corresponding to each model, $P[\theta_i|D,M_i]$ is the model likelihood, and $P[\theta_i|M_i]$ is the prior over $\theta_i$. Observe that this is just normalizing factor of the posterior!
+
+$$
+P[\theta_i | D, M_i ] = \frac{P[D|\theta_i, M_i] P[\theta_i|M_i]}{P[D|M_i]}
+$$
+
+We now see why this quantity is termed the "evidence": it represents the overall likelihood of the data under a given model. Another term for this quantity is therefore the **marginal likelihood**, in analogy with the marginal posterior quantity which we've already seen.
+
+Having computed the marginal likelihood for both models, we can now compare between the two models. To do so we use the ratio of their posterior probabilities:
+
+$$
+\begin{split}
+\frac{P[M_1|D]}{P[M_2|D]} &= \frac{P[D|M_1]P[M_1]}{P[D|M_2]P[M_2]}\\
+&= \frac{P[D|M_1]}{P[D|M_2]} \frac{P[M_1]}{P[M_2]}\\
+&= BF \times \frac{P[M_1]}{P[M_2]}\\
+\end{split}
+$$
+
+The quantity $BF = \frac{P[D|M_1]}{P[D|M_2]}$ is referred to as the Bayes Factor. Since we are typically indifferent between $M_1$ and $M_2$ initially, then it is reasonable to set $P[M_1] = P[M_2]$. In this case, when $BF > 1$ then $M_1$ is preferred, and when $BF<1$ then $M_2$ is preferred.
+
+Computing the Bayes Factor can be done in a few ways. There's at least one package which integrates with `rstanarm` called `bayestestR`. However here I'll just compute the Bayes Factor by hand.
+
+Since, as with the marginal likelihood, the Bayes Factor can be written as a
+
+Let's use the Bayes Factor to determine if the "family" variables, `sibsp` and `parch` are helpful for predicting survival rates:
+```{r}
+marg.like = function(mod){
+  ll = log_lik(mod) %>% apply(.,1,sum) # log_lik extracts the model likelihood for each sample and datapoint pair
+  return(ll %>% exp %>% mean)
+}
+
+mod.nofam = stan_glm(survived~pclass+sex+age+fare, data=dat, family=binomial, prior=normal(location=0,scale=2.5), refresh=0)
+
+margin.like = mod %>% marg.like
+margin.like.nofam = mod.nofam %>% marg.like
+
+bf = margin.like/margin.like.nofam
+
+print('The Bayes Factor is:')
+print(bf)
+```
+
+We see that, according to the Bayes Factor, the family variables are really important! Notice that this does not guarantee that both 
+
+The Bayes Factor can be understand as the Bayesian version of the likelihood ratio statistic, which was the foundation for the deviance hypothesis test. Like the deviance hypothesis test, it will indicate that a group of variables is important so long as any one of them matters. But be aware that this does not mean that *every* variable is important:
+
+```{r}
+mod.nosibsp = stan_glm(survived~pclass+sex+age+fare+parch, data=dat, family=binomial, prior=normal(location=0,scale=2.5), refresh=0)
+margin.like.nosibsp = mod.nosibsp %>% marg.like
+
+mod.noparch = stan_glm(survived~pclass+sex+age+fare+sibsp, data=dat, family=binomial, prior=normal(location=0,scale=2.5), refresh=0)
+margin.like.noparch = mod.noparch %>% marg.like
+
+print('The Bayes Factor for sibsp alone is:')
+print(margin.like.nosibsp/margin.like.nofam)
+
+print('The Bayes Factor for parch alone is:')
+print(margin.like.noparch/margin.like.nofam)
+```
+
+## Predictive Metrics
+
+Bayes Factors have a couple of problems that make them challenging to use in some practical cases. For example, when choosing between two point values of a continuous parameters, Bayes Factors are not appropriate. 
+
+In these cases, it is better to use model selection criteria which assess a model's *predictive performance*. There are two commonly used types of such criteria. The first are the Information Criteria (IC), which includes the AIC (Akaike Information Criterion) that we've already seen. In general, you can understand this family of model selection tools as attempting to *approximate* the predictive performance of a model, without actually performing cross-validation. The second approach is then just to *actually* perform cross-validation, and specifically Leave-One-Out Cross-Validation (LOO-CV). 
+
+Both the IC and LOO-CV are trying to estimate the same quantity: *expected log-posterior density* (ELPD), which is the "natural" Bayesian choice for measuring out-of-sample data.
+
+Say that, given some data $t$, we have obtained a *predictive posterior density*, defined last lecture as $P[\tilde y | y] = \int P[\tilde y|\theta] P[ \theta | y] d \theta$. Moreover, say that the *true* probability density of the data is $\tilde y \sim f(\tilde y)$. We now define the ELPD as: 
+
+$$
+ELPD = E_{\tilde y \sim f}[ \log P[\tilde y | y] ] = \int \log P[\tilde y | y] f(\tilde y) d \tilde y
+$$
+
+This quantity can be thought of as measuring how closely the *predictive posterior distribution* lines up with the *true distribution*. When the ELPD is *large*, then that means that our posterior belief over the values of $\tilde y$ closely lines up with reality (our beliefs are "well calibrated"). When the ELPD is *small*, then values of $\tilde y$ which we think are very likely, actually happen rarely in real life.
+
+The main difference between the IC and LOO-CV is then just how you actually estimate ELPD:
+
+* Estimate ELPD by computing the *within-sample* predictive performance, which by itself overestimates ELPD, and then add a correction term. For historical reasons, these will all be of the form $-2 \left( \hat \text{ELPD})$. Because of the $-2$ scaling factor, with IC **smaller is better**. 
+
+* Estimate ELPD through cross-validation: leave some subset of the data out of the fitting process, and then average the predicted LPD over this holdout data 
+
+### Information Criteria
+
+There are four Information Criteria that you'll see used in the wild: Akaike (AIC), Deviance (DIC), Watanabe-Akaike (WAIC), and Bayes (BIC). Somewhat confusingly, that last one isn't actually used in Bayesian statistics, so we'll ignore it here. The AIC we have already seen used a few times, it is defined:
+
+$$
+AIC = -2 \left( \log P[y | \hat \theta_{\text{MLE}}] - k \right)
+$$
+
+The basic idea with the AIC is that it approximates the ELPD with the highest possible value of the log-likelihood, $\log P[y | \hat \theta_{\text{MLE}}] = \log \prod_{i=1}^n P[y_i|\hat \theta_{\text{mle}}]$. The correction term here is then just $k$. This criteria is nice because we can compute it for both Bayesian and Frequentist models, since it only depends on the model likelihood.
+
+The DIC is then like the Bayesian version of the AIC. It swaps out $\hat \theta_{\text{MLE}}$ for the posterior mean $\hat \theta_{\text{Bayes}}$, and replaces $k$ with a quantity called the **effective number of parameters**. The DIC is "better" from the Bayesian standpoint, but can't be computed for non-Bayesian models so is kind of a niche tool.
+
+Compared to the AIC and the DIC, the WAIC is an extremely recent, with the main publication having been published in 2013. Despite it's novelty, the WAIC has rapidly gained popularity as the model selection tool of choice for Bayesian stats.. The underlying theory is fairly complex, but it can be ultimately thought of as just an improvement to the AIC and DIC, such that some problematic edge cases aren't a problem anymore. For this reason, WAIC is sometimes called the **Widely Applicable Information Criterion**. 
+
+Of these IC, the WAIC is the easiest to compute directly from `rstanarm` models:
+```{r}
+waic(mod)
+```
+
+### Cross Validation
+
+With the rise of ML and AI, cross-validation has become a popular tool for measuring model performance, and this extends to Bayesian statistics. It turns out that computing the ELPD using cross-validation is very natural for Bayesian models, although the actual algorithm is slightly more trouble to outline than it's worth. This becomes especially simple when, rather than applying k-fold cross validation (chunk up the data into k subsets, and hold each subset aside in turn), we instead apply Leave-One-Out cross-validation. 
+
+The idea of LOO-CV is to, one at a time, treat each point in the dataset as "training data". Basically fit the posterior for all of the data but one (denoted $y_{[-i]}$), and the compute the log posterior of the holdout point ($y_i$):
+
+$$
+LPD_i = \log P[y_{i} | y_{[-i]}] = \log \int P[y_{i} | \theta] P[\theta| y_{[-i]}] d \theta
+$$
+
+You then estimate the ELPD as:
+
+$$
+ELPD \approx \frac{1}{n} \sum_i LPD_i
+$$
+
+This quantity is *also* straightforward to compute from `rstanarm`:
+
+```{r}
+loo.mod = loo(mod)
+loo.nofam = loo(mod.nofam)
+loo.nosibsp = loo(mod.nosibsp)
+loo.noparch = loo(mod.noparch)
+```
+
+And there are additional functions to help you compare multiple models:
+```{r}
+loo_compare(loo.mod,loo.nofam,loo.nosibsp,loo.noparch) # this comparison includes smart estimates of the error in LOO-CV differences
+```
+
+# Bayesian Hierarchical Models
+
+The Bayesian approach to hierarchical modeling is, in many ways, more natural than the version which we have seen. From a mathematical point of view, the two are almost identical, but the interpretation is entirely different.
+
+Let's apply a Bayesian hierarchical *logistic* regression to the titanic dataset. We will use PCLASS as our pooling variable, and we will indicate which class a datapoint belongs to with the index $j$. First, let the vector $\vec x_i = [1, \text{SEX}_i, \text{AGE}_i, \text{SIBSP}_i]$ (ignoring the PARCH variable, per our previous analysis), and let the outcome $\text{SURVIVED}_{ij}$ be the survival status of the $i^{\text{th}}$ passenger in group $j$.
+
+Now, the full hierarchical model can be written:
+
+$$
+\begin{split}
+\text{SURVIVED}_{ij} &\sim \text{Bernoulli}( \text{logit}^{-1}( \vec x_i^T \vec \beta_j )  )\\
+\vec \beta_j &\sim N(\vec \mu_{\beta},\sigma_{\beta}^2 I)\\
+\vec \mu_{\beta} &\sim N(\vec \omega,\tau^2 I)
+\end{split}
+$$
+As with the hierarchical models that we have dealt with before, the coefficient vectors $\vec \beta_j$ are assumed to be random, however here there distribution can be interpreted in two ways:
+
+1. The interpretation we have seen before, as a "group level" error distribution that induces correlation between datapoints from the same group (recall our county-level radon examplee)
+2. The prior distribution under which all $\vec \beta_j$ are iid
+
+Moreover, we have introduced a *second* prior on top of our first prior. Recall that in hierarchical modeling function `lmer` $\vec mu_{\beta}$ was in fact estimated, we just didn't talk about how. In Bayesian hierarchical modeling we also must estimate $\vec \mu_{\beta}$, but now we'll do it the Bayesian way: by endowing it with it's **hyperprior**, and rolling it into the posterior distribution.
+
+The full, joint posterior over all model parameters now has the form (assuming the variance parameters $\sigma^2$ and $\tau^2$ are known, for simplicity):
+
+$$
+P[\vec \beta_j, \vec \mu_{\beta} | y_{ij}, \vec x_i] \propto P[y_{ij} | \vec \beta_j, \vec \mu_{\beta}, \vec x_i] \times P[\vec \beta_j | \vec \mu_{\beta}] \times P[\vec \mu_{\beta}]
+$$
+
+Typically we then *marginalize* this posterior, to remove $\vec \mu_{\beta}$:
+$$
+P[\vec \beta_j| y_{ij}, \vec x_i] = \int P[\vec \beta_j, \vec \mu_{\beta} | y_{ij}, \vec x_i] d \vec \mu_{\beta} 
+$$
+Let's fit a Bayesian hierarchical model in `rstanarm` and compare it to our winning non-hierarchical model:
+
+```{r}
+mod.hiearchical = stan_glmer(survived~(sex|pclass) +age+fare+parch , data=dat, family=binomial, refresh=0, algorithm='meanfield') 
+
+loo.hierarchical = loo(mod.hiearchical)
+
+## sorry this example has no output, the code was EXTREMELY slow so we have to use the meanfield algorithm to fit in a reasonable (demonstration) time.
+## However this screws up rstanarms ability to compute the LOO-CV score
+# loo_compare(loo.noparch, loo.hiearchical)
+```
+

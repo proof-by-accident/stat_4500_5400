@@ -1,0 +1,333 @@
+---
+title: "Lecture 19- Partial Pooling"
+author: "Peter Shaffery"
+date: "3/30/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warnings=FALSE, message=FALSE)
+```
+
+# Example - Radon
+Let's say that you would like to buy a house in Minnesota. A big concern when buying a new house is checking its radon levels. Radon is a colorless, odorless gas produced as part of the radioactive decay process of Uranium. Prolonged exposure to radon can have serious (and negative) health consequences, so it's important to buy a house without radon!
+
+Fortunately you've got a dataset containing household level radon measurements all over Minnesota. Included in this dataset is the household's county, the floor on which the measurement was made on, as well as some other potentially useful variable. You'd like to use this information to find a house with low radon levels.
+
+```{r}
+library(tidyverse)
+library(magrittr)
+
+dat = read.csv('../../data/radon_mn.csv')
+dat %>% head
+
+hist(dat$activity)
+dat$log_radon = log(dat$activity+.001)  # since activity bounded convert to log scale, offset slightly to avoid issues with log(0)
+hist(dat$log_radon)
+```
+
+## Model 1- County-level Averages
+
+Let's start by imagining the simplest possible model of radon levels in the state of Minnesota:
+```{r}
+pool = mean(dat$log_radon,na.rm=TRUE)
+pool
+```
+
+It may not seem like much, but even a sample average is (technically) a type of model:
+$$
+y_i = \mu + \epsilon_i
+$$
+We'll call this model our *pooled* model, since it ignores any differences in radon measurements due to county, floor of measurement, etc. It's just *pooling* all of the datapoints together and taking a mean
+
+Now, obviously this model has problems. For one it has $R^2=0$ (since the SSR term is just equal to SSE). If we're trying to estimate the radon in house within a given county, our sample mean is probably going to be off by quite a lot!
+
+A simple way to account for differences by mean counties would be to simply group our data at the county level, and then take an average: 
+```{r}
+sigma.y = sd(dat$log_radon)
+unpool = dat %>% 
+  group_by(county) %>%
+  summarize(radon_mn=mean(log_radon), radon_se=sigma.y/sqrt(n()), size=n() )
+```
+
+Note that the county average $\mu_j$ has standard error $\frac{\hat \sigma_j}{\sqrt{n}}$ (why?).
+
+We'll call this our *unpooled* model, since it is **not** ignoring differences due to county. We are not treating the data as one homogeneous pool anymore, but rather separating out the data into groups.
+
+There are two ways we could think about this model. The first is a model which estimates a separate mean $\mu_j$ for each county $j$:
+
+$$
+y_i = \mu_{j[i]} + \epsilon_i 
+$$
+Here I am introducing a special index notation $j[i]$, which means that the county index $j$ which corresponds to datapoint $i$. 
+
+We could have also written this model in our usual regression format but introducing dummy variables for each county. Recall that, because we have more than two counties, we must *one-hot encode* the "county" variable, that is create a binary indicator variable $C_j$, for each of the $j=1,...,K$ counties. That model would look like:
+
+$$
+y_i = \beta_0 + \sum_{j=1}^K \beta_j C_{ji} + \epsilon_i 
+$$
+Where $\beta_0 + \beta_j = \mu_j$
+
+While this model does a good job accounting for variation in radon levels between counties, it has a problem:
+```{r}
+dat$county %>% table %>% sort
+```
+A lot of counties only have a handful of measurements! What this means is that, for these counties, our estimates of $\mu_j$ are going to have high standard error (solid line shows the pooled mean):
+
+```{r}
+ggplot(unpool,aes(x=size,y=radon_mn,ymin=radon_mn+radon_se,ymax=radon_mn-radon_se)) +
+  geom_point() +
+  geom_errorbar() +
+  geom_hline(yintercept=pool) +
+  labs(x='Sample Size', y='Estimated mu')
+```
+So on the one hand, we had the pooled model. This had the advantage of having a very large sample size, so its estimate was highly *precise*, but by ignoring county-level variation it has low *accuracy*. On the other hand, we have the unpooled model which could accurately account for county-level variation, but for small counties its estimates weren't precise.
+
+What we need is a compromise model between these two approaches, a **partial pooling** model. It turns out that the model which will accomplish this compromise looks like this:
+
+$$
+\begin{split}
+y_i &= \mu_{j[i]} + \epsilon_i\\
+\mu_j &= \alpha + \eta_j\\
+\end{split}
+$$
+Where $\eta_j \sim N(0, \sigma^2_{\mu})$ (and similarly $\epsilon_i \sim N(0, \sigma^2)$). We will refer to the $\eta_j$ as **group-level errors**, in contrast with the $\epsilon_i$ which are **individual-level errors**.
+
+Let's take a look at the estimated $\mu_j$ and their associated standard errors. Don't worry about the code right now, what matters is the output plot:
+``` {r}
+library(lme4)
+library(arm)
+
+partial.pool = lmer(log_radon~(1|county), data=dat)
+partial.pool = data.frame(ranef(partial.pool)$county+fixef(partial.pool),se.ranef(partial.pool)$county)
+partial.pool$county = rownames(partial.pool)
+partial.pool$size = unpool$size
+names(partial.pool) = c('radon_mn','radon_se','county','size')
+
+plt.df = rbind(unpool,partial.pool)
+plt.df$model = rep(c('No Pooling','Partial Pooling'),each=nrow(unpool))
+plt.df %<>% filter(size<30)
+plt.df$size = plt.df$size + runif(nrow(plt.df),-5,5)
+
+ggplot(plt.df,aes(x=size,y=radon_mn,ymin=radon_mn+radon_se,ymax=radon_mn-radon_se)) +
+  geom_point() +
+  geom_errorbar() +
+  geom_hline(yintercept=pool) +
+  facet_wrap(~model)
+```
+
+As expected, the partial-pooling estimate has compromised between the pooled and unpooled estimates of the $\mu$. We see that in the partial pooling all the $\mu_j$ have been pulled closer to the pooled mean, and that their standard errors have been substantially equalized.
+
+But why does this work? What about introducing that second level of randomness into our model causes the estimates to push together?
+
+There are two (equivalent) explanations. The first is simply an approximation of $\hat{\mu}_j^{(\text{partial pooled})} $:
+$$
+\hat \mu_j^{(\text{partial pooled})} \approx \frac{ \frac{n_j}{\sigma^2_y} \bar y_j + \frac{1}{\sigma^2_{\mu}} \bar y  }{\frac{n_j}{\sigma^2_y} + \frac{1}{\sigma^2_{\mu}}}
+$$
+Here we clearly see that the partial-pooling estimate is a weighted average between the pooled and unpooled estimates. When either $n_j$ (the number of observations in county $j$) or  $\sigma^2_{\mu}$ is large then the unpooled estimate dominates the average. On the other hand, for the counties with small sample sizes, or when $\sigma_y^2$ is large, then the pool estimate takes over.
+
+While this formula makes clear *what* is happening, it doesn't provide much insight into *why* it's happening. 
+
+Let's look at $\sigma^2_{\mu}$. What is the interpretation of this parameter? Well, by definition: 
+
+$$
+\sigma^2_{\mu} = \text{Var}[(\mu_j - \alpha)^2]
+$$
+That is, $\sigma^2_{\mu}$ controls (on average) how far apart the $\mu_j$ can be from their mean, and consequently from each other. Put another way, if we have two county $\mu_j$ and $\mu_k$, you can show that:
+$$
+E[(\mu_j - \mu_k)^2] = 2 \sigma^2_{\mu}
+$$
+Now consider one of the counties with a very high sample size, say St. Louis county (n=113). This gives us a very confident estimate of $\mu \approx .8$ for St. Louis' average log-radon levels. Moreover, from our partially pooled model we have an estimate of $\sigma_{\mu}=.33$ (don't worry about how we got this just yet). That means that, roughly speaking, we can expect 99% of the other $\mu_j$ to fall with 3 standard deviations of St. Louis, ie. the range $.8 \pm .99$. Thus, even for the counties with very few observations, we already have a lot of information about what the plausible values of their $\mu_j$ could be. Even if the estimate is still a little less precise, we're almost positive that it won't be less than $\approx -.2$.
+
+Speaking a little more qualitatively, our partial pooling model allows different county groups to *share information* with each other. By assuming a common distribution on the $\mu_j$, with a variance $\sigma^2_{\eta}$ we are effectively curtailing the possible range that an estimate of $\mu_j$ can take. 
+
+
+## Model 2 - County-level Regressions
+
+So our partially-pooled county model is all well and good, it gives us a nice estimate for the **county-level mean log-radon levels**. But it isn't the whole story, what about the floor variable? Radon seeps up from the ground, so we would expect there to be a relationship between floor of measurement and radon activity.
+
+As with our simple model, we have three options.
+
+The first option is a simple pooled regression:
+
+$$
+y_i = \beta_0 + \beta_1 x_i + \epsilon_i
+$$
+Here $x_i$ is our floor indicator ($x_i=1$ if the measurement was made in a basement, and is 0 otherwise). 
+
+#### Aside: What counts as "Pooling"?
+
+**\<aside\>**
+
+Depending on your perspective, you could also consider this model to be "unpooled" (of the previous type) where the basement indicator is the grouping variable. While this is the case in this specific example because of the definition of $x_i$, everything here can also be applied to cases where $x_i$ is continuous. In that case it would no longer be appropriate to think of $x_i$ as a grouping variable, and thus the model would no longer have the interpretation as an unpooled model. For this reason I will be referring to this as the "pooled" model.
+
+**\<\/aside\>**
+
+We might also perform an "unpooled" regression, that is a regression which includes county-level information. Recall that the "dummy variable" approach gives us two options for this. 
+
+The first is a simple regression including both the floor variable ($x_i$) as well as the county-level indicators that we saw from the last example ($C_{ji}$):
+$$
+y_i = \beta_0 + \beta_1 x_i + \sum_{j=2}^K \beta_j C_{ji} + \epsilon_i 
+$$
+
+We might also want to include *interaction* terms between $x_i$ and the $C_{ji}$, that is add a $\sum_{j=K+1}^{2K} \beta_j C_{ji} x_i$ term to the above model. For simplicity, we will not deal with the interaction model just yet, but keep it in mind.
+
+Now, observe that our model with the county level indicators could also be written:
+$$
+y_i = \beta_{0j[i]} + \beta_1 x_i + + \epsilon_i 
+$$
+Where $\beta_{0j} = \beta_0 + \beta_j$. That is, our indicator variable model is equivalent to estimating separate intercept terms for each county (this was the logic behind the Simpson's Paradox example way back in Lecture 7).
+
+Let's fit both the pooled and unpooled variables, and look at the results for a few counties.
+
+```{r}
+pooled = lm(log_radon ~ floor, data=dat)
+unpooled =  lm(log_radon ~ floor + county, data=dat)
+
+plt.df = dat
+plt.df$pooled = predict(pooled)
+plt.df$unpooled = predict(unpooled)
+counties = c('LACQUIPARLE','AITKIN','KOOCHICHING','STLOUIS')
+plt.df %<>% filter( county %in% counties )
+
+ggplot(plt.df, aes(x=floor)) +
+  geom_point(aes(y=log_radon)) + 
+  geom_line(aes(y=pooled)) +
+  geom_line(aes(y=unpooled),linetype='dashed') +
+  facet_wrap(~county)
+```
+Look at the unpooled model (dashed line) for Lac Qui Parle county. It's predictions are *way* higher than everywhere else, but there's only two datapoints! Again, because the sample size is so small there is a substantial amount of uncertainty in $\beta_{0j}$ (or, equivalently, $\beta_j$). 
+
+As before, we need to apply partial pooling in order to strike a balance here:
+$$
+\begin{split}
+y_i &= \beta_{0j[i]} + \beta_1 x_i + \epsilon_i\\
+\beta_{0j} &\sim N(\mu_{\beta},\sigma_{\beta}^2)\\
+\end{split}
+$$
+
+This model is *very* similar to the partial pooling example we have already seen, except now we have added an additional coefficient $\beta_1$ which is constant across counties.
+
+#### Aside: Terminology
+
+**\<aside\>**
+Models like the above are sometimes called **mixed effects models**, that is it contains coefficients ("effects") which are both **fixed** (the $\beta_1$) and others which are **random** (like $\beta_{0j}$). Models which only contain random effects are sometimes called **random effects models**.
+
+In general, I'm not a big fan of the term "random effects", and this course I will use either the term **partial pooling** (as above) or **hierarchical model** (alternately **multilevel model**). It's not that the term "random effects" is wrong *per se*, but in my opinion "partial pooling" describes more accurately how this class of model operates. Similarly "hierarchical model", as we will see, describes an alternative method of understanding how these models can be interpreted.
+
+**\<\aside\>**
+
+In R, the standard function we use to fit this kind of model is `lmer` (from the package `lme4`, `lmer`="Linear Mixed Effects in R" and `lme`="Linear Mixed Effects"). This function operates fairly similar to the usual `lm` function, except the functions look a little different: 
+
+```{r}
+partial = lme4::lmer(log_radon ~ floor + (1|county) - 1, data=dat)
+```
+
+Here note the `(1|county)` term, which corresponds to the $\beta_{0j}$. Unlike the regression table of `lm`, `lmer` contains a little less information:
+```{r}
+summary(partial)
+```
+Notice that this doesn't include any actual estimates of the $\beta_{0j}$. This is typical for dealing with models of this form, as often there will simply be too many $\beta_{0j}$ for that output to be really meaningful. Instead we get estimates of $\sigma^2_{\beta}\approx .1$ and $\sigma^2_{\epsilon} = .74)$, as well as $\beta_1=-.76$. If we want the specific estimates of the *random effects* we need:
+```{r}
+ranef(partial) %>% head
+fixef(partial)
+```
+
+Let's add in the predictions from our partially-pooled regression:
+```{r}
+plt.df = dat
+plt.df$pooled = predict(pooled)
+plt.df$unpooled = predict(unpooled)
+plt.df$partial = predict(partial)
+counties = c('LACQUIPARLE','AITKIN','KOOCHICHING','STLOUIS')
+plt.df %<>% filter( county %in% counties )
+
+ggplot(plt.df, aes(x=floor)) +
+  geom_point(aes(y=log_radon)) + 
+  geom_line(aes(y=pooled)) +
+  geom_line(aes(y=unpooled),linetype='dashed') +
+  geom_line(aes(y=partial),linetype='dotted',color='red') +
+  facet_wrap(~county)
+```
+Just like with our first example, we see that the partial pooling approach creates a "compromise" between the pooled and unpooled models. When the county-level sample size is low, the partially pooled prediction is very close to the pooled estimate (Aitkin and Koochiching counties), but when the sample size is high the partially pooled model stays near the unpooled regression. Note that the regression for Lac Qui Parle county is still a good bit higher than any other county! Even just given those two measurements, it would appear that Lac Qui Parle has higher overall radon levels, but nowhere near as high as we would have gotten with the unpooled estimate.
+
+As with the previous example, we can see this effect in an approximation of the partially pooled estimates:
+
+$$
+\hat \beta_{0j}^{(\text{partial pooled})} \approx \frac{ \frac{n_j}{\sigma^2_y} }{\frac{n_j}{\sigma^2_y}  + \frac{1}{\sigma^2_{\beta}}} (\bar y_j + \beta_1 \bar x_j)  + \frac{ \frac{1}{\sigma^2_{\beta}} }{\frac{n_j}{\sigma^2_y} + \frac{1}{\sigma^2_{\beta}}} \mu_{\beta}
+$$
+Notice that $(\bar y_j + \beta_1 \bar x_j)$ is the estimate $\hat \beta_{0j}$ from our unpooled model.
+
+## Model 3 - Varying Slopes
+
+So the final variant we will look at today is the logical extension of the previous model. So far, the models we have seen have all been *varying intercept* models; in the context of the example they assume that baseline radon might be different between counties, but that the overall effect of the floor the measurement was on is consistent.
+
+This is actually a pretty reasonable assumption for this example, even though we might expect different regions of the state to have different radon production, once the gas is in the air the physics probably don't vary much between St. Louis and Lac Qui Parle.
+
+Nevertheless, for completeness let's look at a *varying slopes* model. Whereas the previous approach was an extension of the model:
+$$
+y_i = \beta_0 + \beta_1 x_i + \sum_{j=2}^K \beta_j C_{ji} + \epsilon_i 
+$$
+Now we will extend the interaction model:
+$$
+y_i = \beta_0 + \beta_1 x_i + \sum_{j=2}^K \beta_j C_{ji} + \sum_{j=K+1}^{2K} \beta_j C_{ji} x_i + \epsilon_i 
+$$
+Observe that this model is equivalent to:
+$$
+y_i = \beta_{0j[i]} + \beta_{1j[i]} x_i + \epsilon_i 
+$$
+So for each county we would be running completely separate regressions. As before, this will produce some wild estimates when $n_j$ is small:
+```{r}
+pooled = lm(log_radon ~ floor, data=dat)
+unpooled =  lm(log_radon ~ floor*county, data=dat)
+
+plt.df = dat
+plt.df$pooled = predict(pooled)
+plt.df$unpooled = predict(unpooled)
+counties = c('LACQUIPARLE','AITKIN','KOOCHICHING','STLOUIS')
+plt.df %<>% filter( county %in% counties )
+
+ggplot(plt.df, aes(x=floor)) +
+  geom_point(aes(y=log_radon)) + 
+  geom_line(aes(y=pooled)) +
+  geom_line(aes(y=unpooled),linetype='dashed') +
+  facet_wrap(~county)
+```
+
+Our final partially pooled "version" of this model would be:
+$$
+\begin{split}
+y_i &= \beta_{0j[i]} + \beta_{1j[i]} x_i + \epsilon_i\\
+\beta_{0j} &\sim N(\mu_{\beta_0},\sigma_{\beta_0}^2)\\
+\beta_{1j} &\sim N(\mu_{\beta_1},\sigma_{\beta_1}^2)\\
+\end{split}
+$$
+We can also fit this type of model with `lmer`. Similar to how `lm` interprets interaction terms `floor*county`, `lmer` will expand `(floor|county)` to include `(1|county)` as well:
+```{r}
+partial = lmer(log_radon ~ (floor|county), data=dat)
+
+plt.df = dat
+plt.df$pooled = predict(pooled)
+plt.df$unpooled = predict(unpooled)
+plt.df$partial = predict(partial)
+counties = c('LACQUIPARLE','AITKIN','KOOCHICHING','STLOUIS')
+plt.df %<>% filter( county %in% counties )
+
+ggplot(plt.df, aes(x=floor)) +
+  geom_point(aes(y=log_radon)) + 
+  geom_line(aes(y=pooled)) +
+  geom_line(aes(y=unpooled),linetype='dashed') +
+  geom_line(aes(y=partial),linetype='dotted',color='red') +
+  facet_wrap(~county)
+```
+
+
+<!--
+```{r}
+fe.pool = lm(log_radon~basement, data=dat)
+fe.nopool = lm(log_radon~basement+county, data=dat)
+interact = lm(log_radon~basement*county, data=dat)
+re = lmer(log_radon~basement + (1|county), data=dat)
+AIC(fe.pool,fe.nopool,interact,re)
+```
+-->

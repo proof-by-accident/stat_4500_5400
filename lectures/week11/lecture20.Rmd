@@ -1,0 +1,163 @@
+---
+title: "Lecture 20- Partial Pooling"
+author: "Peter Shaffery"
+date: "3/30/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warnings=FALSE, message=FALSE)
+```
+
+# Example - Radon
+Let's say that you would like to buy a house in Minnesota. A big concern when buying a new house is checking its radon levels. Radon is a colorless, odorless gas produced as part of the radioactive decay process of Uranium. Prolonged exposure to radon can have serious (and negative) health consequences, so it's important to buy a house without radon!
+
+Fortunately you've got a dataset containing household level radon measurements all over Minnesota. Included in this dataset is the household's county, the floor on which the measurement was made on, as well as some other potentially useful variable. You'd like to use this information to find a house with low radon levels.
+
+```{r}
+library(tidyverse)
+library(magrittr)
+library(lme4)
+
+radon = read.csv('../../data/radon_mn.csv')
+radon$log_radon = log(radon$activity+.001)
+
+radon %>% head
+```
+
+Recall from last lecture, our *varying-intercepts, partial-pooling* model:
+
+$$
+\begin{split}
+y_i &= \alpha_{j[i]} + \beta_1 x_i + \epsilon_i\\
+\alpha_j& = \mu_{\alpha} + \eta_j\\
+\end{split}
+$$
+By relating the $\alpha_j$ to each other through the model $\alpha_j \sim N(\mu_{\alpha},\sigma^2_{\alpha})$ we allow the different counties to *share* information with each other, while also allowing for different counties to have different baseline log-radon.
+
+Let's fit that model
+```{r}
+partial = lmer(log_radon ~ floor + (1|county), data=radon)
+```
+
+Now, let's say that in addition to our dataset containing household-level radon measurements we *also* have a dataset containing county-level data
+```{r}
+county = read.csv('../../data/county_radon.csv')
+county %>% head
+```
+
+We see that, among other things, this dataset contains a measure of the county's level of Uraniam (the column `Uppm`). Since radon is a product of uranium decay, we would expect a county's overall uranium levels to be predictive of its radon baseline. Let's combine this county data with our estimates $\hat \alpha_j$
+
+```{r}
+plt.df = ranef(partial)$county
+plt.df$county = plt.df %>% rownames
+names(plt.df)=c('coef','cty')
+
+plt.df %<>% left_join(county %>% filter(st=='MN'),by=c('cty')) 
+
+ggplot(plt.df, aes(x=Uppm,y=coef)) +
+  geom_point()
+
+lm(coef ~ Uppm, data=plt.df) %>% summary
+```
+
+Clearly county UPPM predicts $\alpha_j$, the county's baseline radon levels. Can we account for this relationship in our model? Yes!
+
+$$
+\begin{split}
+\text{LOG_RADON}_i &= \beta_0 + \beta_1 \text{FLOOR}_i + \sum_j \beta_{j[i]} \text{COUNTY}_{j[i]} + \epsilon_i\\
+\beta_j &=  \gamma_0 + \gamma_1 \text{UPPM}_j + \eta_j
+\end{split}
+$$
+
+Where $\eta_j \sim N(0, \sigma^2_{\beta})$
+
+Fundamentally, this is not different than our partial pooling model $\alpha_j \sim N(\mu_{\alpha},\sigma^2_{\alpha})$. In both cases, we are simply specifying a linear model for the $\beta_j$, the only difference is in the mean of that model: $\mu_{\beta}$ vs $\gamma_0 + \gamma_1 \text{UPPM}_j + \eta_j$.
+
+How can we interpret this model? One obvious way we have already seen, it simply relates the baseline log-radon to county-level features. But how is that different than just including UPPM as an independent variable in our log-radon regression?
+
+Well, observe that we can plug the "upper" level of the model directly into the "lower" level:
+$$
+\begin{split}
+\text{LOG_RADON}_i &= \beta_0 + \beta_1 \text{FLOOR}_i + \sum_j (\gamma_0 + \gamma_1 \text{UPPM}_{j[i]} + \eta_{j[i]}) \text{ COUNTY}_{j[i]}  + \epsilon_i\\
+&= \beta_0' + \beta_1 \text{FLOOR}_i + \sum_j (\gamma_0 + \gamma_1 \text{UPPM}_{j[i]} + \eta_{j[i]}) \text{ COUNTY}_{j[i]}  + \epsilon_i\\
+\end{split}
+$$
+
+Now, because $\text{ COUNTY}_{j[i]}$ is an indicator variable, only one term in that sum will end up in the final regression for any given $i$, hence we can just write this as:
+$$
+y_i = \beta_0 + \beta_1 \text{FLOOR}_i + \gamma_0 + \gamma_1 \text{UPPM}_{j[i]} + \eta_{j[i]} + \epsilon_i
+$$
+
+Combining up like terms:
+$$
+\begin{split}
+y_i &= (\beta_0 + \gamma_0) + \beta_1 \text{FLOOR}_i + \gamma_1 \text{UPPM}_{j[i]} + (\eta_{j[i]} + \epsilon_i)\\
+&= \beta_0' + \beta_1 \text{FLOOR}_i + \beta_2 \text{UPPM}_i + \epsilon_i'\\
+\end{split}
+$$
+Now, this *looks* like the model that just plugs UPPM directly into the regression, but pay close attention to the error terms:
+$$
+\epsilon_i' = \eta_{j[i]} + \epsilon_i
+$$
+These error terms are not independent! Two error terms from the same county $j$ will share a $\eta_{j}$ factor. From this we can show a few interesting facts. First off, $\text{Var}[\epsilon_i] = \sigma^2_y + \sigma^2_{\beta}$. Second, we have that if $i$ and $k$ are the indices of two measurements from the same county (ie. $j[i]=j[k]$) then $\text{Cov}[\epsilon_i,\epsilon_k] = \sigma^2_{\beta}$. Finally, only if $i$ and $k$ correspond to measurements from *different* counties is $\text{Cov}[\epsilon_i,\epsilon_k] =0$.
+
+Finally, finally, observe that there is one more way that we could write this (same) model:
+$$
+\begin{split}
+\text{LOG_RADON}_i &= \alpha_{j[i]} + \beta_1 \text{FLOOR}_i + \beta_2 \text{UPPM}_{j[i]} + \epsilon_i\\
+\alpha_{j[i]} &=  \gamma_0 + \eta_j
+\end{split}
+$$
+And observe that we could combine these two levels of the model together and obtain the same result as if we included UPPM in the "upper" level of the model instead. This final form is how `lmer` prefers county-level data to be incorporated:
+
+```{r}
+dat = radon %>% left_join(county,by=c('county'='cty'))
+mod = lmer(log_radon ~ floor + Uppm + (1|county), data=dat)
+summary(mod)
+
+```
+# When is Hierarchical Modeling/Partial Pooling Effective?
+
+Typically hierarchical modeling is effective when pooling and non-pooling are *uneffective*. This sounds a little circular, but it's the simplest heuristic. If $\sigma^2_{\beta}$ is small relative to $\sigma^2_y$ then there isn't going to be much improvement over the pooled model. Conversely if $\sigma_{\beta}^2$ is much larger than $\sigma_y$ then the unpooled model will win out. 
+
+This leads us to the *intraclass correlation*: $\rho = \frac{\sigma_{\beta}^2}{(\sigma_{\beta}^2 + \sigma_y^2)}$. When $\rho$ is close to 0 then the grouping contains almost no information, and the hierarchical structure isn't adding much to the model. On the other hand, when $\rho$ is close to 1 then within a grouping the $y_i$ will be very similar (setting aside differences due to the independent variables), and so an unpooled model may be more appropriate.
+
+```{r}
+summary(partial)
+```
+From the above we have that $\hat \sigma_y^2 = .074$ and $\hat \sigma_{\beta}^2=.11$, giving as an intraclass correlation of $\rho \approx .6$. This is indicative of both county-, and individual-level variation being present in the model, and helps explain why the partial pooling (ie. hiearchical) model is an effective choice.
+
+## Can I Hypothesis Test the Hierarchical Structure?
+
+Not really. Much like how it can be difficult to interpret the p-values of a one-hot encoded categorical variable with a large number of levels, p-values in the context of a hierachical model are challenging to make sense of. If only a small number of county-levels produce "significantly" non-zero $\hat \alpha_j$, does that mean that the county variable is an appropriate grouping-variable? It's difficult to say.
+
+Moreover, significance testing kind of misses the point. Typically in a hierarchical modeling scenario, we don't really care whether St. Louis has significantly different log-radon levels than Lac Qui Parle. We're using the model hierarchy to allow our model to control for county-county variability (or intra-group correlation) in a principled way.
+
+## What Can I Use Instead?
+
+We *do* still have ANOVA for models containing only categorical variables, deviance to compare nested models, and AIC for pretty much any case. All of these become more complex due to the hiearchical structure, however.
+
+For one, it's challenging to characterize the "number of parameters", since we've allowed some parameters to be random. Instead define an "effective number of parameters" (or "effective degrees of freedom"), which is an estimate of how much pooling the model performs. 
+
+Typically it's easiest to have these quantities computed using a package or just the `AIC` function from `stats`:
+
+```{r}
+pool = lm(log_radon~floor, data=radon)
+unpool = lm(log_radon~floor+county, data=radon)
+interact = lm(log_radon~floor*county, data=radon)
+re = lmer(log_radon~floor + (1|county), data=radon)
+
+AIC(pool,unpool,interact,re) %>% arrange(AIC)
+```
+
+# Hiearchical, Generalized, Linear Models
+
+We can pretty straightforwardly extend the hiearchical modeling approach to the world of GLMs. Say that instead of working with log-radon, we converted the radon activity measurement to a "counts" scale and used a poisson regression instead:
+
+```{r}
+radon$activity_count = 10*radon$activity
+mod = glmer(activity_count ~ floor + (1|county), data=radon, family=poisson)
+summary(mod)
+```
+

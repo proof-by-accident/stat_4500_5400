@@ -1,0 +1,301 @@
+---
+title: "Lecture 24"
+author: "Peter Shaffery"
+date: "4/15/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+# Bayesian Regression
+Say that we have $n$ observations $(y_i,\vec x_i)$, and we would like to perform Bayesian regression using the linear model:
+
+$$
+y_i \sim N( \vec x_i^T \vec \beta, \sigma^2)
+$$
+A common choice of prior here is the improper prior:
+
+$$
+P[\vec \beta, \sigma^2] \propto \frac{1}{\sigma^2}
+$$
+
+Our posterior distribution is then:
+
+$$
+\begin{split}
+P[\vec \beta, \sigma^2 | y, X] &\propto \frac{1}{\sigma^2} \prod_{i=1}^n N(y_i; \vec x_i^T \vec \beta , \sigma^2) \\
+&\propto \frac{1}{\sigma^{n+2}} \exp \left[-\frac{1}{2 \sigma^2} \sum_i^n(y_i - \vec x_i^T \beta)^2 \right]
+\end{split}
+$$
+
+Although this full posterior, when treated as a density over both $\vec \beta$ and $\sigma^2$, does not correspond to a named distribution, some of the conditional and marginal posteriors *do*.
+
+The most obvious conditional which can be interpreted is simply:
+$$
+P[\vec \beta| \sigma^2, y, X] = MVN( \hat \beta, V_\beta \sigma^2 )
+$$
+Here the multivariate mean $\hat \beta$ is the least squares estimator the we are closely acquainted with: $\hat \beta = (X^TX)^{-1}X^Ty$, and the matrix $V_{\beta} = (X^TX)^{-1}$. Notice that the mean and variance matrix of this conditional posterior match exactly to their corresponding "frequentist" versions (the MLE and standard error).
+
+Besides the conditional posterior over $\vec \beta$, the marginal over $\sigma^2$ has the form:
+
+$$
+P[\sigma^2 | y] = \text{Inv-}\chi^2(n-k, s^2)
+$$
+Where $k$ is the number of columns in $X$, and $s^2= \frac{1}{n-k}(y-X \hat \beta)^T(y-X \hat \beta)$ 
+
+# Fitting
+
+Last lecture we saw some simple algorithms that we could apply to draw samples from a given posterior density function. As mentioned, in practice it is not common to implement these algorithms by hand. Instead, it is strongly recommended to use a package which will handle the sampling for you.
+
+One such package available in R is `rstanarm`. `rstanarm` is actually a "wrapper", a package which provides a simple interface to a more complicated software utility. In this case, the utility that it provides access to is *another* wrapper, `rstan`, which wraps a probabilistic programming language called Stan. Stan is an incredibly powerful tool for performing Bayesian inference, however its workflow can be a little complicated (I have some lecture notes available [here](https://github.com/proof-by-accident/stan_lectures) if you're interested). 
+
+Writing a bunch of Stan code from scratch when you just want to perform a regression is a huge hassle, especially compared to the simplicity of `lm`, hence `rstanarm` provides a regression toolset that matches the functions we are already familiar with.
+
+Let's use `rstanarm` to perform a linear regression on the `fuel` dataset from Lecture 4. We'll regress GAS (gas consumption per state, in millions of gallons) against TAX (state gas tax in cents) and POP (state population, in millions of people):  
+
+```{r, message=FALSE}
+library(tidyverse)
+library(magrittr)
+
+fuel = read.csv('../../data/fuel.csv') %>% drop_na
+fuel %>% head
+
+stdize = function(x){(x-mean(x))/sd(x)}
+dat = fuel %>% select(c(tax,pop)) %>% dplyr::mutate(pop=stdize(pop),tax=stdize(tax)) 
+dat['gas'] = fuel$gas
+
+mod = rstanarm::stan_lm(gas~tax+pop, dat, prior=NULL)
+summary(mod)
+plot(mod)
+```
+
+Wow there's a lot of info in this output! We won't be able to cover everything, but let's look at the some of the core info. Most of the time when you're using `rstanarm` this info won't tell you much that's useful (unless your data has something really weird going), nevertheless it's helpful to have an idea of what it's supposed to be communicating.
+
+## Chains
+
+The `stan_lm` function returns a lot of output regarding the behavior of the underlying sampler. You'll notice that this output is broken into 4 blocks, corresponding to the sampler **chains**. Sampler chains can be thought of as multiple iterations of the same sampler, running in parallel. But why would we want this?
+
+Well let's quickly recall how the Metropolis-Hasting sampler works. Stan doesn't use Metropolis-Hastings exactly (it uses a souped-up variant called Hamiltonian Monte Carlo), but the reasoning still applies.
+
+Recall that Metropolis-Hastings produced samples by *proposing* a candidate from *nearby* our previous sample. This means that the samples returned by the algorithm **are not independent**. There is correlation between any two adjacent samples in your sampler trajectory (and sometimes quite a lot)! This is problematic for our estimates, because it can effect how well $\frac{1}{n} \sum_i^n \theta^{(k)}$ approximates $E_{\theta|y}[\theta]$.
+
+There are many ways to deal with this, but a simple one is to just run a lot of samplers independently of each other, ie. *chains*. Since the multiple chains share no information, you guarantee that $\theta^{(k)}$ from different chains are independent. Typically 4 chains are used, but this is more a computational limit than a theoretical one, and some samplers operate by running millions of chains in parallel.
+
+## `log-fit_ratio`
+
+This is kind of a weird one, and won't be useful to us in most contexts. Crudely speaking, the log-fit ratio is the logarithm of the ratio between the posterior variance and the estimate of $\sigma^2$. Usually you want this to be $\leq 0$, but if it's a small positive value that's okay.
+
+## Fit Diagnostics
+
+We'll talk about this one more in a second, but if everything is working as intended then it should be close to `mean(fuel$gas)`:
+```{r}
+mean(fuel$gas)
+```
+
+## MCMC Diagnostics
+
+There are two quantities that we care about here: `Rhat` and `n_eff`. The first, `Rhat`, is a measure of how well "converged" the sample chains are. Recall from last lecture that Metropolis-Hastings (and all related algorithms) have a *burn-in** period, a portion of the sampler trajectory where the sampler is trying to orient itself in parameter space. `Rhat` measures whether this sampler has adequately left this phase (ie. "found the posterior"), or whether it needs to run for longer. When `Rhat`>1 then it indicates that burn-in has not finished yet (rule of thumb is `Rhat`>1.1).
+
+`n_eff` on the other hand is a measure of the quality of our samples. Above I mentioned that samples are not *independent* of each other. One way to think about how this effects $\frac{1}{n} \sum_i^n \theta^{(k)}$ is the concept of *effective sample size*. You can imagine that, if the samples are correlate with each other, it's like you don't have as much info about $E_{\theta|y}[\theta]$ as if they were uncorrelated; your samples are *worth less* than if they were independent. `n_eff` expresses this concept by converting your true sample size $N$, to an "equivalent N" represetning how much info you have. Here you're looking for `n_eff` that's realively large. There's not a clear cutoff here, but if `n_eff` is **way** lower than N (like N=10,000 and `n_eff`=5) then it indicates that your sampler has a problem.
+
+# Prediction
+
+Now that we've fit our model, let's look at how we could use it for prediction.
+As with Frequentist regression, Bayesian regression prediction takes two forms.
+
+## Predicting $E[y|X]$
+
+Recall our go-to formula for predicting the *mean* value of $y$, $\hat y = X \hat \beta$, where the standard error of this estimate could be obtained using that hat matrix: $\text{Var}[\hat y] = \sigma^2 H^T H$. The idea here was that since $\hat \beta$ is our best guess for $\beta$, $\hat y$ is our best guess for $y$.
+
+The logic in Bayesian regression is similar, except now instead of a single estimate of $\hat y$, we have a posterior distribution over $\hat y$.
+
+The definition of this posterior is straightforward. Since $E[y] = X^T \vec \beta$ is just a linear function of $\vec \beta$, and could in principal apply the [formula](https://en.wikipedia.org/wiki/Probability_density_function#Vector_to_vector) for linear transformations of random variables  
+
+However, as with pretty much everything in Bayesian statistics, it is computationally easier to perform this operation on our *posterior samples* $\vec \beta ^{(k)}$ rather than doing all the math out by hand.
+
+To start, let's say that we want to predict $\hat y_{\text{new}}$ for the new state of Smolorado, which has a gas tax of 10 cents a gallon, and a population of 1 million people:
+
+```{r}
+# we need to either scale the new data, or the coefficients, by the mean and std of tax and pop
+
+tax.mn = fuel$tax %>% mean
+tax.sd = fuel$tax %>% sd
+
+pop.mn = fuel$pop %>% mean
+pop.sd = fuel$pop %>% sd
+
+x.new = c( 1, (10-tax.mn)/tax.sd, (1000-pop.mn)/pop.sd ) %>% as.matrix # 10 cents/gal, 1000 one mil ppl
+```
+
+Now, the way that we transform the samples $\vec \beta^{(k)}$ is quite simple:
+$$
+\hat y_{\text{new}}^{(k)} = \vec x_{\text{new}}^T \vec \beta^{(k)}
+$$
+
+In R we can accomplish this with:
+```{r}
+samps = as.matrix(mod)
+samps %>% head
+
+beta.samps = samps[,1:3]
+beta.samps %>% head
+beta.samps %<>% t
+
+y.new.samps = t(x.new) %*% beta.samps
+
+mean(y.new.samps)
+sd(y.new.samps)
+hist(y.new.samps)
+```
+
+Notice that the mean of the $\hat y_{\text{new}}^{(k)}$ is just equal to $x_{\text{new}}^T E_{\beta|y,x_{\text{new}}}[\vec \beta]$:
+
+```{r}
+beta.mn = beta.samps %>% apply(1,mean)
+print(t(x.new)%*%beta.mn)
+```
+
+We use this line of thinking to compute our "Bayesian regression line", defined as:
+$$
+\hat y = X E_{\beta|y,x_{\text{new}}}[\vec \beta]
+$$
+```{r}
+X = dat %>% select(tax,pop) %>% cbind(matrix(1,nrow=nrow(dat)),.) %>% as.matrix
+y.hat = X %*% beta.mn %>% as.numeric
+```
+  
+We can also use this quantity to compute some of our usual diagnostics (residual vs. fit plots, QQ plots, etc):
+```{r}
+resids = dat$gas - y.hat
+resids.std = resids %>% stdize
+
+plot(y.hat,resids)
+car::qqPlot(resids.std, envelope=FALSE)
+```
+
+The regression line can also be obtained directly from `rstanarm`:
+```{r}
+y.hat2 = predict(mod)
+```
+
+You may notice that these quantities are *slightly* different:
+```{r}
+y.hat-y.hat2
+```
+This is because `rstanarm` is computing `y.hat` from the full predictive posterior distribution, whereas we are only averaging over $\beta$ here.
+
+
+## Posterior Predictive Distribution
+
+Recall that in Frequentist regression we had defined a "forecasting" error, besides our estimate single point estimate $\hat y$. This quantity gave us some expectation about what values of $y$ were plausible, given our OLS estimate $\hat \beta$. In Bayesian regression, the equivalent concept is called the **posterior predictive distribution**.
+
+One way that we can think about the posterior distribution, is as a probability distribution over "possible worlds". The quantity $P[\beta_1 =  0 | y, X]$ indicates how probable we think it is that we are "in the world" where $\beta_1 = 0$. This line of thinking gave us one way to reason about marginal posteriors, in the case of multiple parameters:
+
+$$
+P[\theta_1 | y] = \int P[\theta_1 | \theta_2, y] P[\theta_2| y] d \theta_2
+$$
+The posterior predictive distribution *also* follows this reasoning. The core idea is fairly simple: under a fixed value of $\vec \beta^*$, we know that that $y \sim N(X \vec \beta^*, \sigma^2)$. Furthermore, using our posterior we can assign a probability value to the statement $y \sim N(X \vec \beta^*, \sigma^2)$, specifically we say that the probability this is true is $P[\vec \beta^* | y, X]$, the posterior density.
+
+If we were going to *forecast* what future values of $y$ are plausible, it therefore makes the most sense to create a *mixture* of all of the forecasts we would obtain under the different values of $\vec \beta$, weighted by how probable we think those values are. This mixture is the **posterior predictive distribution**:
+
+$$
+P[\tilde y | y, X, \tilde x] = \int P[y|\vec \beta, \tilde x] P[\vec \beta | y,X] d \vec \beta
+$$
+Notice that I'm using $\tilde y$ and $\tilde x$ here to distinguish *future data* from *observed data* ($y$). Another way of expressing the same quantity is:
+
+$$
+P[\tilde y | y, \tilde x] = E_{\vec \beta | y, X} \left[ P[y|\vec \beta, \tilde x] \right ]
+$$
+As with the previous form of prediction, we typically won't compute this quantity by hand. Instead, we will draw samples of $\tilde y^{(k)}$, which will use to approximate the mean, variance, quantiles etc. of $P[\tilde y | y, \tilde x]$.
+
+Unlike in the previous example, producing such samples is slightly more involved (but not much). The basic idea is to iterate over two steps:
+
+1. Draw a posterior sample $\beta^{(k)} \sim P[\vec \beta | y,X]$
+2. Draw a predictive sample $\tilde y \sim P[y|\beta^{(k)}, \tilde x]$
+
+To keep the notation simple here, I am ignoring the fact that we also need a sample of $\sigma^2$, but including this in code is fairly simple. Let's create some posterior predictive samples for our example state of Smolorado:
+```{r}
+samps %>% head
+sigma.samps = samps[,4]
+
+y.tilde.mn = t(x.new)%*% beta.samps %>% as.numeric # notice that this is just our y.new.samps vector from above
+y.tilde.samps = rnorm(4000,y.tilde.mn, sigma.samps)
+
+mean(y.tilde.samps)
+sd(y.tilde.samps)
+
+plt.df = data.frame('y.hat'=y.tilde.mn,'y.tilde'=y.tilde.samps)
+
+ggplot(plt.df) +
+  geom_histogram(aes(x=y.hat),position='identity',alpha=.3,fill='red') +
+  geom_histogram(aes(x=y.tilde),position='identity',alpha=.3,fill='blue') +
+  labs(x='GAS')
+
+```
+
+As with the Frequentist forecasting distribution, the predictive posterior distribution is far more dispersed than the posterior distribution over $\hat y$.
+
+### Aside: Prior Predictive Distributions
+
+Besides forecasting the data *after* we've made observations, it's sometimes convenient to forecast the data *before* we've seen any observations. This quantity can be referred to as a **prior predictive distribution**, and it is defined in the natural way:
+
+$$
+P[\tilde y| \tilde x] = \int P[\tilde y | \vec \beta, \tilde x] P[\vec \beta] d \vec \beta
+$$
+
+The reason we might care about this quantity, is that it helps us translate our priors over $\vec \beta$ into a quantity that is more easily interpreted. It's challenging to reason about what slope or intercept coefficients are plausible in the real world, but it's often easy to reason about the dependent variable $y$. 
+
+For example, let's reduce our GAS regression down to just include the variable TAX, and let's use wide, normal prior distributions for both $\beta_0$ and $\beta_1$:
+
+$$
+\begin{split}
+\text{GAS} &= \beta_0 + \beta_1 POP + \epsilon_i\\
+\beta_0 &\sim N(\mu=0, \sigma=10^6)\\
+\beta_1 &\sim N(\mu=0, \sigma=10^6)
+\end{split}
+$$
+
+Now let's calculate the prior predictive distribution for Smolorado (assumign that we know $\sigma_y = 2118$):
+
+```{r}
+TAX = 10
+
+beta0 = rnorm(1e5,0,1e9)
+beta1 = rnorm(1e5,0,1e9)
+y.tilde.samps = rnorm(1e5, beta0+beta1*TAX, 2118)
+
+hist(y.tilde.samps, main='Predictive Prior over GAS' )
+```
+
+Does this prior over the values of GAS make sense? Not really! For one, it implies that we beleive that there is a ~50\% chance that Smolorado consumed more gas than the entire US did in 1990 (113 billion gallons):
+
+```{r}
+sum(y.tilde.samps>(113e3))/length(y.tilde.samps) # since GAS is in millions of gallons, 142e3 corresponds to 142 billion gallons
+sum(y.tilde.samps>(0))/length(y.tilde.samps) # since GAS is in millions of gallons, 142e6 corresponds to 142 billion gallons
+```
+
+Moreover, it assumes that it is possible for there to be negative values for GAS! Let's choose some narrower priors, and limit our prior on $\beta_0$ to be strictly positive. We'll also center $\beta_0$ at about the average state gas consumption in 1990: $\frac{113e3}{51}\approx 2215$ (in units of millions of gallons).
+$$
+\begin{split}
+\text{GAS} &= \beta_0 + \beta_1 POP + \epsilon_i\\
+\beta_0 &\sim N_+(\mu=2215, \sigma=10^4)\\
+\beta_1 &\sim N(\mu=0, \sigma=10^5)
+\end{split}
+$$
+
+```{r}
+TAX = 10
+
+beta0 = truncnorm::rtruncnorm(1e5,mean=2215,sd=1e4,a=0)
+beta1 = rnorm(1e5,0,1e3)
+y.tilde.samps = rnorm(1e5, beta0+beta1*TAX, 2118)
+
+hist(y.tilde.samps, main='Predictive Prior over GAS' )
+
+
+sum(y.tilde.samps>(142e3))/length(y.tilde.samps) # since GAS is in millions of gallons, 142e6 corresponds to 142 billion gallons
+sum(y.tilde.samps>(0))/length(y.tilde.samps) # since GAS is in millions of gallons, 142e6 corresponds to 142 billion gallons
+```
+This is a far more reasonable belief about GAS consumption (at least in my opinion!) Obviously some negative values are still present, but that's always going to be baked-in for linear regression, and in our prior only represents about 25\% of our belief, so we'll live with it!

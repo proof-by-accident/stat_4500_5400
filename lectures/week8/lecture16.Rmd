@@ -1,0 +1,268 @@
+---
+title: "Lecture 16"
+author: "Peter Shaffery"
+date: "3/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+# Logistic Regression Residuals 
+
+In linear regression, our choice of residual was fairly obvious:
+$$
+\hat{\epsilon}_i = y_i - \hat{y}_i
+$$
+However in logistic regression, as with $R^2$, we have a couple of options available to us for residuals. 
+
+One such option are the Pearson residuals (or chi-square residual):
+$$
+\begin{split}
+\chi_i &= \frac{y_i - \hat{y}_i}{ \sqrt{\text{Var}[y_i | \hat{\pi}_i]} }\\
+&= \frac{y_i - n_i \hat{\pi}_i}{ \sqrt{n_i \hat{\pi}_i (1-\hat{\pi}_i) } }\\
+\end{split}
+$$
+
+This choice of residual follows from the Pearson chi-square goodness of fit measure:
+$$
+\chi^2 = \sum_i \frac{(y_i-n_i \hat{\pi}_i)^2}{n_i \hat{\pi}_i(1-\hat{\pi}_i)}
+$$
+
+Since it's not hard to see that:
+
+$$
+\chi^2 = \sum_i \chi_i^2
+$$
+
+For a detailed discussion of $\chi^2$, see IGLM 7.5. We won't talk too much more about it, since for large $n$ it's equivalent to the model deviance.
+
+Another choice for residuals are *Deviance residuals*, which measure an individual observation's contribution to the overall model deviance.
+
+For a normal model, we saw that the Deviance was:
+$$
+D_{\text{Normal}} \propto \sum_i \hat{\epsilon}_i^2
+$$
+This will motivate us to define our deviance residuals $D_i$ such that $D = \sum_i D_i^2$.
+
+For the Binomial regression model we showed the model deviance to be: 
+$$
+D = 2 \sum_i \left[ y_i \log \frac{y_i}{n_i \hat{\pi}_i} + (n_i -y_i) \log \frac{n_i-y_i}{n_i (1-\hat{\pi}_i)} \right]
+$$
+
+Hence for a single observation $y_i$ (along with $n_i$), the Deviance residual should be:
+$$
+D_i = \sqrt{2 \left[ y_i \log \frac{y_i}{n_i \hat{\pi}_i} + (n_i -y_i) \log \frac{n_i-y_i}{n_i (1-\hat{\pi}_i)} \right]}
+$$
+
+Note that this definition of $D_i$ cannot be less than 0, which is a little weird. To fix this we amend the definition to be:
+$$
+D_i = \text{sign}(y_i - n_i \hat{\pi}_i ) \sqrt{2 \left[ y_i \log \frac{y_i}{n_i \hat{\pi}_i} + (n_i -y_i) \log \frac{n_i-y_i}{n_i (1-\hat{\pi}_i)} \right]}
+$$
+Observe that we still have $D = \sum_i D_i^2$.
+
+Both the deviance and Pearson residuals, can be *standardized* using the leverage $h_i$ (the $i^{\text{th}}$ diagonal element of the hat matrix $H=X(X^TX)^{-1}X^T$):
+$$
+r_{i}^D = \frac{D_i}{\sqrt{1-h_i}},r_{i}^{\chi} = \frac{\chi_i}{\sqrt{1-h_i}}
+$$
+
+When the $n_i$ are large, both types of standardized residuals will be approximately $N(0,1)$.
+
+```{r, message=FALSE, warning=FALSE}
+library(tidyverse)
+library(magrittr)
+
+dat = read.csv('../../data/titanic.csv')
+
+# the titanic data contains some missing data that we'll just ignore for now....
+dat %<>% drop_na
+
+# we don't care about a few of the columns
+dat %<>% select(-c('name','ticket','cabin'))
+dat$pclass %<>% as.factor 
+
+mod = glm(survived~pclass+age+sex+sibsp+parch, family=binomial, data=dat)
+
+r.pearson = resid(mod,type='pearson')
+plot(r.pearson)
+
+r.deviance = resid(mod, type='deviance')
+plot(r.deviance)
+
+# Null model deviance is model containing only intercept, residual deviance is sum of squared residuals
+summary(mod)
+sum(r.deviance^2)
+
+```
+
+# Diagnostic Plots
+
+In general, diagnosing a GLM is more challenging than diagnosing a linear regression, it is typically recommended to place a lot of weight on things like deviance to get a handle of model performance. Nevertheless, we do still have some familiar tools at our disposal.
+
+## Residuals vs Fitted Values
+
+As with linear regression, we want to determine whether our "linear model" is appropriate, that is whether $g(E[y_i])$ is indeed linear in the independent variables $\vec{x}_i$.
+
+One way that we can do this is by plotting the (standardized) residuals against the "predicted value" of $g(E[y_i])$, $\vec{x}_i \hat{\beta}$:
+
+```{r}
+h = hatvalues(mod)
+r.dev.std = r.deviance/sqrt(1-h)
+plot(predict(mod),r.deviance, xlab='Fitted', ylab='Dev Resid')
+```
+
+Now, if this were a linear regression we would be very skeptical of this plot. However, recall that the deviance residuals are calculated from the $y_i$, which in this case can only be 0 or 1. This produces the "banding" that we see here.
+
+In general, for a GLM we will always expect some trend due to the link function. What matters here overall is that there is not **average** trend, that is the residuals are not increasing or decreasing overall:
+```{r}
+plot(mod,which=1)
+```
+
+Be aware that R will give you the Pearson residuals. Almost always it makes no difference.
+
+When average trend *does* exist, it indicates that a better choice of link function is required. Let's see dose-response example from Lecture 14:
+
+```{r}
+dose.dat = read.csv('../../data/beetles.csv')
+dose.dat$fails = dose.dat$n - dose.dat$y
+lhs = as.matrix(dose.dat[,c('y','fails')])
+
+mod.logit = glm(lhs~dose.dat$dose, family=binomial)
+mod.cll = glm(lhs~dose.dat$dose, family=binomial(link='cloglog'))
+
+plot(dose.dat$dose,dose.dat$y/dose.dat$n,xlab='Dose',ylab='y/n')
+lines(dose.dat$dose,predict(mod.logit, type='response'),col='red')
+lines(dose.dat$dose,predict(mod.cll, type='response'),col='blue')
+legend('topleft',c('Logit','CLL'),col=c('red','blue'), lwd=1)
+
+plot(mod.logit,which=1)
+plot(mod.cll,which=1)
+```
+
+Here we see that the complimentary log-log link (which produced the best fitting model last time we saw it) also produces a better residual-fitted plot than a logistic regression.
+
+(PS: you might notice a similar, although slight, trend occurring in the Titanic plot as well, which might further lead you to conclude that a CLL model is better here as well...)
+```{r}
+mod.cll = glm(survived~pclass+age+sex+sibsp+parch, family=binomial(link='cloglog'), data=dat)
+plot(mod.cll,which=1)
+```
+
+## Q-Q Plots
+
+As mentioned above, standardized Pearson residuals are approximately normal:
+```{r}
+plot(mod,which=2)
+```
+
+The problem here is that, while a good Q-Q plot is a good sign, a bad Q-Q plot can't really be interpreted. Either your choice of distribution was bad, or you have not achieved approximate normality yet. Just looking at the residuals it can be practically impossible to tell, and even harder to fix. For this reason, Q-Q plots aren't particularly informative for GLMs.
+
+## Scale-Location Plots
+
+As with Q-Q plots, scale location plots are a challenging to apply to the GLM context. 
+
+Observe that the Binomial model actually *assumes* heteroskedasticity will exist in the data:
+$$
+\text{Var}[y_i] = n_i \pi_i (1-\pi_i)
+$$
+So predicted variance will be maximized when $\hat{\pi}_i=.5$, and minimized at either $\hat{\pi}_i=0,1$. It's not hard to convice yourself that this is equivalent to occurring at $\vec{x}_i \hat{\beta} = \text{logit}^{-1}(\hat{\pi}_i) =0$
+
+```{r}
+plot(mod,which=3)
+```
+
+## Leverage, Outliers, and Cook's D
+
+As with linear regression, we care a lot about influential observations. We might remove (or model separately) data points with unusually high residual values (deviance or Pearson). We also can still think about *leverage* ($h_i$). It also turns out that we can still use Cook's D (which I'll denote with a $C$ here to avoid mixing up with deviance):
+
+$$
+C_i = r_{i}^{\chi} \frac{h_i}{(1-h_i)p}
+$$
+Where $p$ is the number of variables in our model. One thing to note here, is is that this version of Cook's D is only an approximation of the average change in predictions, due to the removal of datapoint $i$. Only for linear regression is this formula exact (Pregibon, 1981).
+
+```{r}
+plot(mod,which=5)
+```
+
+Another measure of influence discussed in IGLM is the "delta-betas", which is more commonly referred to as the DFBETA. Whereas Cook's distance attempts to estimate $\frac{1}{n} \sum_j (\hat{y}_j - \hat{y}_{j,(i)})$ (where $\hat{y}_{j,(i)}$ is the prediction made without the $i^{\text{th}}$ datapoint), the DFBETA is $\hat{\beta}_j - \hat{\beta}_{j,(i)}$. In a model with $n$ observations and $p$ variables, there will be $n \times p$ DFBETA values:
+
+```{r}
+head(dfbeta(mod))
+car::dfbetaPlots(mod)
+```
+
+For the case of linear regression, averaging the DFBETA over all predictors gives Cook's D (see IGLM 6.2.7). 
+
+# Overdispersion
+
+One possible difficulty with logistic regression (which we will also see occur in Poisson regression) is *overdispersion*. 
+
+Recall that the variance of a Binomial distribution is:
+$$
+\text{Var}[y_i] = n_i \pi_i (1-\pi_i)
+$$
+Overdispersion occurs if the actually observed variance of $y_i$ is greater than this. There are a number of ways to deal with this, but one interesting option is to force your model to account for this overdispersion by assuming:
+
+$$
+\text{Var}[y_i] = n_i\pi_i (1-\pi_i) \phi
+$$
+Here $\phi$ is known as the **overdispersion parameter**. This can be fit using R's `quasibinomial` GLM family:
+
+```{r}
+mod.logit.overdisp = glm(lhs~dose.dat$dose, family=quasibinomial)
+summary(mod.logit.overdisp)
+```
+
+We see that $\phi \approx 2$ (with $\phi=1$ just returning the binomial model). In this case it would appear that some overdispersion is possibly present, although more likely this is due to the issue we've seen with the logistic link function:
+```{r}
+mod.cll.overdisp = glm(lhs~dose.dat$dose, family=quasibinomial(link='cloglog'))
+summary(mod.cll.overdisp)
+```
+
+Now, the "quasibinomial model" is a little weird, because it turns out that we're not using a true "likelihood" when we include the overdispersion parameter. Because of this, some quantities (such as AIC or confidence intervals on $\phi$) will not be available to us.
+
+Thus the use of a quasi-binomial model is going to be largely "at your discretion". See IGLM 7.7 for a quick discussion of overdispersion, and a reference to further details if you're interested.
+
+# Nominal (Multinomial) Regression
+
+Sometimes it will be the case that your response variable $y_i$ can take on multiple categorical values. If there is no natural ordering to these values, then one method for modeling this data is **multinomial regression**.
+
+The multinomial distribution generalizes the binomial distribution to the case of categorical values. Say that we have $k$ categories, and represent the number of occurrences of each category as $(x_1,...,x_k)$. The multinomial PMF is then:
+
+$$
+P[x_1,...,x_k] = \frac{n!}{x_1!...x_k!} \pi_1^{x_1}...\pi_k^{x_k}
+$$
+
+Where $n = \sum_j x_j$. It's not hard to convince yourself that when $k=2$ this reduces to the binomial PMF.
+
+In order to model multinomial data, we first must pick a **reference class**. Since the category values are unordered, it makes no difference which we pick. It's therefore common to choose $x_1$.
+
+Having chosen our reference class, we now apply a logistic model to the log-odds between each category and the reference:
+$$
+\log(\frac{\pi_j}{\pi_1}) = \vec{x}^T \vec{\beta}_j
+$$
+
+Notice that this means that, if we have $p$ independent variables, then our final model will have $p \times k$ coefficients ($k$ vectors $\vec{\beta}_j$, each containing $p$ elements).
+
+Since we must have that $\pi_1 + ... + \pi_k=1$, it can be shown that:
+$$
+\begin{split}
+\pi_1 &= \frac{1}{1+\exp[ \vec{x}^T \vec{\beta}_1]}\\
+\pi_{j=2,...,k} &= \frac{\exp[ \vec{x}^T \vec{\beta}_j]}{1+\exp[ \vec{x}^T \vec{\beta}_j]}\\
+\end{split}
+$$
+As with binomial logistic regression, we can interpret the coefficients in terms of odds ratios. Say we have a single independent variable $x$, the odds ratio for an individual with with variable value $x+1$ vs an individual with variable $x$ is:
+$$
+\text{OR}_j = \frac{\pi_{j,x+1}}{\pi_{1,x+1}} / \frac{\pi_{j,x}}{\pi_{1,x}} = \exp \beta_{1j}
+$$
+Let's apply a multinomial model to model the island distribution of the penguins dataset:
+```{r}
+library(nnet) # R doesn't fit multinomial models normally, so we'll need a package
+library(palmerpenguins)
+dat = penguins %>% drop_na
+
+mod = multinom(island~bill_length_mm + bill_depth_mm + body_mass_g,data=dat)
+summary(mod)
+confint(mod)
+```
+

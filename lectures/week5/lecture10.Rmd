@@ -2,7 +2,7 @@
 title: "Lecture 10"
 author: "Peter Shaffery"
 date: "2/16/2021"
-output: pdf_document
+output: html_document
 ---
 
 ```{r setup, include=FALSE}

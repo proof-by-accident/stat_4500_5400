@@ -1,0 +1,358 @@
+---
+title: "Lecture 21"
+author: "Peter Shaffery"
+date: "4/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warnings=FALSE, message=FALSE)
+```
+
+# Introduction \#1 - Medical Testing
+
+Imagine that you are an RN, in charge of administering a medical test which indicates whether a patient has a certain disease or not.
+
+Say that when a patient **has** the disease, then the test indicates a "positive" 80\% of the time, and a false negative the other 20% of the time. Similarly, if a patient does **not** have the disease, then the test indicates a "negative" 99% of the time, and gives a false positive the other 1% of the time. 
+
+We can think of this a very simple probability model, $P[Y|\theta]$, where $Y$ denotes the test result ($Y=1$ indicating a positive result), and $\theta$ (the only model parameter) denoting the patient's true condition ($\theta=1$ denoting the that the patient has the disease, and $\theta=0$ denoting them not having the disease).
+
+We can write town the complete PMF for our model in a small table:
+
+ PMF | $\theta=0$ | $\theta=1$
+---:|:---:|:---
+$y=0$ | .99 | .2
+$y=1$ | .01 | .8
+
+Now, say that we perform this test on a single patient, and that it comes out negative. The test is expensive, so based solely on one observation we'd like to make a conclusion about the patient's true disease status $\theta$.
+
+So far our only framework for dealing with this problem has been Null Hypothesis Significance Testing. We designate one specific value of the parameter $\theta$ as our null hypothesis, and compare it against some alternative hypothesis. In this case, we might designate these hypotheses as:
+
+* $H_0$: $\theta=0$ 
+* $H_A$: $\theta=1$
+
+We would proceed by assuming that $H_0$ is true, and calculating the probably of getting data as, or more extreme as the data we observed (the p-value). If that probability is sufficiently low, then we reject $H_0$ in favor of $H_A$ (ie. we conclude that the patient has the disease)
+
+In this example "more extreme" isn't really possible, since the data can only come out one of two ways. Thus we modify our p-value to just be the probability of the datapoint under $H_0$. 
+
+Since we observed $y=0$, and under $H_0$ this occurs $99\%$ of the time, we decide that this data is totally congruous with the null hypothesis, and we fail to reject, ie. conclude that the patient does not have the disease.
+
+However, consider the case where the test (being expensive) is only administrated if a pre-screening cannot rule out the presence of the disease. Based on previous data, you know that 90% of the patients which "pass" this pre-screening (ie. which take the test) have the disease. How does this change our reasoning?
+
+What we are being faced with here is a *base rate problem*. In the past, we've never considered there to be any probability involved with either $H_0$ or $H_A$, we've simply compared their likelihoods to the data. But in many cases this isn't a great assumption! As we see above, in medical testing it is frequently the case that the pre-data analysis probability of one of the hypotheses is a lot higher than the other.
+
+In order to take this into account, we must turn to **Bayes' Theorem**, which states:
+
+$$
+P[A|B] = \frac{P[B|A][P[A]}{P[B]}
+$$
+Even though they call this a theorem, it's really more like a corollary of the properties of conditional probability:
+
+$$
+\begin{split}
+P[A,B] &= P[B,A]\\
+P[A|B] P[B] &= P[B|A]P[A]\\
+P[A|B] &= \frac{P[B|A][P[A]}{P[B]}\\
+\end{split}
+$$
+
+Going back to our medical testing example, we can use Bayes' theorem to compute the *probability* that $\theta=0$, given that $y=0$, $P[\theta=0|y=0]$. To do so, we will need three ingredients:
+
+* $P[y=0|\theta=0]=.99$, which we already have from our PMF table
+* $P[\theta=0]=.1$, which is just the proportion of people who "pass" the pre-screening without having the disease
+* $P[y=0]=.279$, which is a little weird, but can be computed from the other ingredients. It is referred to as a *marginal* probability, and it is computed $P[y=0] = P[y=0|\theta=0]P[\theta=0] + P[y=0|\theta=1]P[\theta=1]$
+
+Combining these up gives us that:
+
+$$
+\begin{split}
+P[\theta=0|y=0] &= \frac{P[y=0|\theta=0][P[\theta=0]}{P[y=0]}\\
+&= \frac{.99\times.1}{.279}\\
+&\approx .35\\
+\end{split}
+$$
+Wow that's much different than the conclusion we drew using our hypothesis testing approach!
+
+This is characteristic of these kinds of base rate problems. The punchline here is that even though our test has an excellent false positive rate, because the patients we are testing are overwhelmingly likely to have the disease a negative result is about twice as likely to be a false negative as not. 
+
+# Interpreting Probability 
+In the above example, dealt entirely with probability in it's *frequentist* interpretation. That is, all of the probabilities can be interpreted as *long-run frequencies*. For example, the probability statement $P[y=1|\theta_1=1] = .8$ has the meaning that if we run sufficiently many medical tests on individuals for whom $\theta=1$, then eventually the ratio of positives ($y=1$) to the whole population will be approximately equal to $.8$, and the more trials we run the better this approximation becomes.
+
+In this case, our application of Bayes' theorem lives entirely in this world of these frequentist probabilities. Indeed if we reframe this problem in terms of frequencies of events, the result might not be as "surprising":
+
+1. In a population of 1,000 people, 100 of them *do not* have a disease
+2. Of those 100, 99 of them will test negative for the disease
+3. Of the 900 people with the disease, 180 of them will also test negative for the disease.
+
+Now tell me, if we test all 1,000 people what proportion of those who test negative actually do not have the disease? Well, we have 99+180=279 people total who test negative, and of that population $99$ of them actually don't have the disease. Therefore the fraction of disease-free people who test negative is $\frac{99}{279} \approx .35$.
+
+I present the example this way because I want to be clear that the term "Bayesian Statistics" does not strictly refer to the application of Bayes' Theorem. Instead what characterizes Bayesian statistics is **how you interpret probabilities**.
+
+In addition to the frequentist interpretation of probability statements outlined above, Bayesian stats introduces a second **subjective** interpretation of probability. One of the more well-known examples of this approach is the popular election news blog FiveThirtyEight. FiveThirtyEight is well known for their forecasts of US presidential elections, which takes the form "Candidate X is P\% likely to win the election".
+
+Notice that this probability statement cannot be interpreted as a long-run frequency. The US election occurs once every 4 years, and each election is fundamentally different from the previous one in many important ways. There is no way to run repeated election "trials" to determine which fraction of them are won by Candidate X. 
+
+Instead, this statement has the interpretation of *degrees of belief*. We are using probabilities to express how much *credence* we assign to the statement "Candidate X will win the election". The higher this number is to 1, the more we believe that the statement is true. Interpreting probabilities is this way is known as a *subjective probability*, since here the probability statements are representing our own *subjective* mental state, rather than an *objective* fact of the world.
+
+Because mental states are typically challenging to observe directly, we make the subjective probability concept concrete through *gambling*. The idea is that people can *say* that they believe anything, but gambling forces you to put your money where your mouth is, and is therefore a more "honest" way of assessing people's degrees of belief in a statement. This is a big assumption, and one which probably doesn't cash out (no pun intended) in reality as cleanly as theoretical Bayesian statistics would like. Nevertheless, it provides a bunch of instructive examples for understanding how Bayesian stats *ought* to work, so we will treat it as "true".
+
+# Introduction \#2- Gambling
+
+Imagine you are playing a game, where you have a bag containing four marbles. The color of the marbles can be white or blue, but you don't know how many of the four marbles there are of each color. Off the bat, we know that there are only five possibilities, which we will call hypotheses, corresponding to 0 through 4 of the marbles being blue. We are trying to choose between these hypotheses by randomly taking one marble from the bag, recording it's color, and then putting it back into the bag. So far we have made three observations: Blue, White, and Blue.
+
+Now, let's say that we are joined by a friend who finds this marble game rather boring. To liven things up, she proposes to you the following betting game: 
+
+1. You will set a price for each of the five hypotheses, denoted $p_B$ where $B$ is the number of blue marbles asserted by the hypothesis. 
+2. She will then purchase some number of "shares" in each hypothesis at the price you offered.  
+3. You will then turn out the bag and count the number of blue marbles $B^*$.
+4. If your friend has a share in the hypothesis that $B=B^*$, then she will win a dollar. You keep all of the money spent to purchase shares.
+
+Given all of this, what pricing strategy do you pick?
+
+## Part 1 - Picking a Rational Pricing Strategy
+
+The first thing you notice is that if your set of prices has the property that $\sum_B p_B < 1$, then you are guaranteed to lose money. Your friend could simply buy one share in each hypothesis. Since one hypothesis must be right, she is guaranteed to net some money.
+
+The second thing you notice is that if your friend buys a set of shares whose combined unit price exceeds a dollar, then she will be guaranteed to lose money. For example, say that your friend buys one share each in $B=1,2,3$ at .40\$ a share. She has spent a total of 1.20\$, but can win at most a dollar. Thus she will lose at least .20\$, and maybe more.
+
+Since you will lose money if $\sum_B p_B < 1$, and your friend will lose money if $\sum_B p_B> 1$, you therefore both agree that the only way this game is going to work out fairly is if $\sum_B p_B = 1$, that is if your prices can be interpreted as *probabilities*. 
+
+This is why gambling is considered such a powerfully motivating justification for the Bayesian statistical approach. You imagine this price-setting game as you and your friend assigning *degrees of belief* to each of the five hypothesis. As the example shows **the only "rational" (ie. fair to both sides) method of assigning degrees of belief is one which corresponds to the axioms of probability.**
+
+## Part 2 - Picking a More Rational Pricing Strategy
+
+So we've now ruled out some pricing schemes that *won't work*, which we have dubbed "irrational" on virtue of being a guaranteed loss for one side. However that still leaves quite a large number of ways to choose the values of the $p_B$. Which should we select?
+
+Well to start, let's simplify the problem a little. Say that we had observed *no* draws before assigning prices. That is, we had no information about the marbles in the bag whatsoever.
+
+In this situation we have no strong reason to prefer either outcome over the other. We are in a position of *indifference*. Therefore, the most sensible pricing scheme is one where all the $p_B$ are equal, and since they must sum to 1 then this is just $p_B^{(0)}=.2$. Your friend, being in a similar position of indifference, will then just purchase one share of each hypothesis. Since she has spent a dollar, and is guaranteed to earn a dollar, nobody wins or loses money for this first round.
+
+Now, let's say you make your three draws, which recall were Blue, White, and Blue. How do you adjust $p_B$? That is, what degree of belief do you assign to each of the hypotheses?
+
+Well first, let's just say that you don't change your prices (ie. degrees of belief) at all. Pretend we retain our pricing strategy from the first round so that $p^{(3)} = p^{(0)}$. Clearly this is a bad idea. Why? Because your friend knows that $B=0$ and $B=4$ are both impossible, so there's no reason for her to buy shares in theme. Moreover, your prices on the remaining probabilities sum to less than 1, $p_1+p_2+p_3=.6$. Therefore she can buy one share in each of the three possible hypotheses and guarantee a gain of .40\$.
+
+What would make more sense is to set $p_0=p_4=0$, and redistribute it's price among the remaining hypotheses (so that everything still sums to 1). But how should we redistribute it? 
+
+Well, since we have shown that it is "rational" to model our degree of belief in hypothesis $B$ as a probability, then it seems reasonable to apply a property of probabilities here, namely Bayes' Theorem:
+
+$$
+P[B | y ] = \frac{ P[y|B] P[B] }{P[y]}
+$$
+Here $B$, the number of blue marbles in the bag, is taking on the role of $\theta$ which in our previous example was a patient's disease status. The random data $y$ denotes our sequence of observations $y=[\text{Blue},\text{White},\text{Blue}]$. What will we do is set our updated price $p^{(n)}_B = P[B|y]$. We refer to this quantity as our **posterior probability** over the values of $B$, conditioned on $y$ ("posterior" because it represents our state of knowledge after observing the data, in Latin this is said to be our *a posteriori* knowledge).
+
+Now, in the medical testing example we had a clear idea of the value of $P[\theta]$, but in this example it is less clear what the value of $P[B]$ is. Here is where the role of belief comes in. $P[B]$ is typically referred to as the **prior**, and it represents our state of belief before observing any data.
+
+As we argued above, before we have observed any data we are in a state of *indifference*, that is we believe that all $B$ are equally possible. Therefore we see that $P[B]=.2$, our initial price.
+
+The denominator $P[y] = \sum_B P[y|B] P[B]$ is called the "evidence". Although it does play a role in Bayesian model selection, in this example you can think of it as the normalizing constant that ensures that the $P[B|y] = p_B^{(3)}$ sums to 1.
+
+Finally, the last term in the model $P[y|B]$ is already quite familiar to us: it's just the **likelihood** of the data $y$ given the parameter value of $B$. We see that, because our prior is simply constant over the values of $B$, that our final posterior $p_B^{(3)}$ is just proportional to the likelihood of the observation, given $B$ (and normalized!)
+
+B | Likelihood | Posterior
+:---|:---|:---
+0 | 0 | 0
+1 | \approx .141 | .15
+2 | .375 | .40
+3 | \approx .423 | .45
+4 | 0 | 0
+
+You may be wondering *why* it's optimal to use this feature of probability to set the prices. The complete reasoning is beyond the scope of this course, but roughly speaking it turns out to be similar to the case where $\sum_B p_B^<1$. If you *don't* set your prices in accordance with Bayes' Theorem, then it turns out that there is a (fairly complicated) sequence of bets your friend could make which would guarantee that you lose money. Only the Bayesian prices ensure that the game stays fair!
+
+Moreover, intuitively this pricing scheme makes a lot of sense. Since we didn't start with any preference for one $B$ over another, our entire decision must rely on the observations. Hypotheses with higher likelihood are more consistent with the observations, and thus we expect that they are more likely to pay out. We therefore need to price them higher, in order not to lose money.
+
+# Introduction \#3 - Coin Tossing
+
+Now that we are familiar with the concepts of Bayesian statistics, let's look at a more standard example: estimating the probability that a coin comes up heads.
+
+Say that we have a coin, and we would like to learn $\pi$, the probability that the coin will come up heads. We toss the coin $n$ times, of which we observe $k$ heads. What does Bayes theorem look like here?
+
+$$
+P[\pi | k] \propto P[k| \pi] P[\pi]
+$$
+Notice that I am omitting the evidence term here, $P[k]$. That is because it has no dependence on the parameter $\pi$, it's just a normalizing constant. Therefore it's common to just deal with posteriors as proportional to $P[k| \pi] P[\pi]$, rather than writing out the whole fraction.
+
+The likelihood for this situation is familar to us, it's the Binomial distribution:
+$$
+ P[k| \pi] = {n \choose k} \pi^k (1-\pi)^{n-k}
+$$
+And furthermore, observe that the ${n \choose k}$ term is constant in $\pi$, so we'll ignore it:
+
+$$
+P[k| \pi] \propto \pi^k (1-\pi)^{n-k}
+$$
+Leaving our prior general for now, our posterior distribution is therefore:
+
+$$
+P[\pi|k] \propto \pi^k (1-\pi)^{n-k} P[\pi]
+$$
+
+Now, which prior should we use? The only restriction that we have is that it must be a valid probability distribution. Otherwise, the choice of prior is up to us. Let's see a few options.
+
+## Prior 1: Uniform Prior
+
+The most obvious (and probably the most common) prior you will ever see is the uniform prior:
+
+$$
+P[\pi] = \begin{cases}
+1, \pi \in [0,1]\\
+0, \text{ else}
+\end{cases}
+$$
+We've actually used this prior in the previous marble example, where we justified it using an "indifference" argument. 
+
+Similarly, the idea with using a uniform prior here would be to express an initial position of *ignorance*. If you are truly starting your coin tossing experiment without any knowledge of the coin, then this is indeed an appropriate choice of prior. No value of $\pi$ is initially prioritized over another.
+
+From this choice of prior we obtain our posterior distribution:
+
+$$
+P[\pi|k] \propto \pi^k (1-\pi)^{n-k} \mathbb{1}_{\pi \in [0,1]}
+$$
+Where $\mathbb{1}_{\theta \in [0,1]}$ is an indicator function.
+
+Let's visualize how this posterior looks for $n=20$, and $k=5,10,$ and $15$:
+
+```{r}
+library(tidyverse)
+n=20
+pi.grid = seq(0,1,.001)
+
+post1= (pi.grid^5)*(1-pi.grid)^(n-5)
+post2 = (pi.grid^10)*(1-pi.grid)^(n-10)
+post3 = (pi.grid^15)*(1-pi.grid)^(n-15)
+
+
+plot(pi.grid,post1/sum(post1),type='l',col='red',xlab='pi',ylab='Posterior Density')
+lines(pi.grid,post2/sum(post2),col='blue')
+lines(pi.grid,post3/sum(post3),col='green')
+legend(x='toprigh',c('k=5','k=10','k=15'),fill=c('red','blue','green'))
+```
+We see that, for each value of $k$, the mass of our posterior density covers different ranges of $\pi$. When $k$ is large, our posterior assigns belief to higher values of $\pi$ than lower ones.
+
+Now let's fix $k$ at 20\% of $n$, and look at how our posterior changes as we increase $n=10,50,100$:
+```{r}
+library(tidyverse)
+pi.grid = seq(0,1,.001)
+
+post1= (pi.grid^(.2*10))*(1-pi.grid)^(.8*10)
+post2 = (pi.grid^(.2*50))*(1-pi.grid)^(.8*50)
+post3 = (pi.grid^(.2*100))*(1-pi.grid)^(.8*100)
+
+
+plot(pi.grid,post1/sum(post1),type='l',col='red',xlab='pi',ylab='Posterior Density')
+lines(pi.grid,post2/sum(post2),col='blue')
+lines(pi.grid,post3/sum(post3),col='green')
+legend(x='topright',c('n=10','n=50','n=100'),fill=c('red','blue','green'))
+```
+
+Whereas increasing $k$ changes the *centrality* of the posterior (eg. it's mean), increasing $n$ changes its *spread*. This is interpreted as our model consolidating around a smaller and smaller range of plausible values of $\pi$, as more and more data become available.
+
+This feature is common across posterior distributions. Assuming some (fairly general) conditions on your data's sampling distribution, then as you collect more and more data your posterior distribution's mass will consolidate around the true parameter values.
+
+Both this, and the centrality feature suggest some important ways of summarizing the information in our posterior distribution: posterior mean and posterior variance:
+
+$$
+\begin{split}
+E_{\theta|y}[\theta] &= \int \theta P[\theta|y] d\theta\\
+\text{Var}_{\theta|y}[\theta]&= \int (\theta -E_{\theta|y}[\theta] )^2 P[\theta|y] d\theta\\
+\end{split}
+$$
+These are pretty much what they sound like- the mean and variance of the posterior distribution. These quantities are fundamental to Bayesian statistics, and you can think of them as the Bayesian version of the MLE ($\hat \theta$) and standard error ($s.e.(\theta)$)
+
+### Aside - Introducing the Beta Distribution
+
+A random variables $x$ whose probability density functions is of the form:
+
+$$
+P[x|a,b] \propto x^{a-1}(1-x)^{b-1}
+$$
+
+Are known as a **Beta Distributed**, and their distribution is the Beta Distribution. Again note that above I am omitting a normalizing constant, which is sometimes instead written in as:
+
+$$
+P[x|a,b] = \frac{ x^{a-1}(1-x)^{b-1} } {B(a,b)}
+$$
+
+Beta distributions are very important in Bayesian statistics, mainly because of the above example and similar. We see that, in the above example, our posterior is beta-distributed with parameters $a=k+1$ and $b=n-k+1$. We can then use standard formulas for the mean and variance of the Beta distribution to compute our posterior mean and variance:
+
+$$
+\begin{split}
+E_{\theta|y}[\theta] &= \frac{a}{a + b} = \frac{k+1}{n+2}\\
+\text{Var}_{\theta|y}[\theta] &= \frac{a b}{(a + b)^2 (a+b+1)} = \frac{(k+1)(n-k+1)}{(n+2)^2(n+3)}\\
+\end{split}
+$$
+
+Pay close attention to the posterior mean: $E_{\theta|y}[\theta] \frac{k+1}{n+2}$. Notice that when $k=n=0$, then our mean is just that $E_{\theta|y}[\theta]=.5$, corresponding to our preference not to favor any value of $\theta$ over another.
+
+One famous application of this formula comes from Pierre-Simon Laplace, the first Bayesian statistician. He used it to calculate the probability that the Sun will rise tomorrow. His argument went that, since $k=n=d$ (the number of days since the Sun was formed), and since $d \approx 6000 \text{ years } \times 365 \text{ days } = 2190000 = $ (Laplace was a creationist and believed that the earth was about 6 millenia old), then:
+
+$$
+E[\text{Sun will rise tomorrow}|d] = \frac{k+1}{k+n+2} =  \frac{d+1}{d+2} \approx 0.9999995
+$$
+
+Observe that no amount of observations will ever quite get $E[\text{Sun will rise tomorrow}|d] =1$.
+
+## Prior 2: Beta Prior
+
+Now, Laplace realized that this was an absurd result. By bringing additional information to the table (specifically orbital mechanics) most people will realize that $P[\text{Sun will rise tomorrow}]=1$, even without any observations.
+
+The problem with the reasoning above then is not necessarily a flaw in Bayesian statistics, but rather in our choice of a uniform prior. 
+
+Although in most cases you don't have quite as strong prior knowledge as from orbital mechanics, in many cases we have *some* information about our parameters $\theta$. In order to represent this, we can use what is a called an **informative prior**. Unlike a uniform prior, which looks the same everywhere, an informative prior places more probability mass over one range of $\theta$ than any other, representing that we initially believe that range of $\theta$ to be the most plausible.
+
+For our coin-tossing example a popular choice of informative prior is the Beta distribution. This is for two reasons:
+
+1. The Beta distribution with $a=b=1$ is just a uniform distribution, so we can view the uniform prior as a "special case" of the beta prior
+2. If we use a Beta prior, and have a Binomial likelihood, then our posterior is guaranteed to be a Beta distribution.
+
+Let's see Property 2 in more detail. Say that our prior is $P[\pi] \propto \pi^{a}(1-\pi)^{b}$, then our posterior is:
+
+$$
+\begin{split}
+P[\pi|k,n] &\propto \pi^{k}(1-\pi)^{n-k} \pi^{a}(1-\pi)^{b}\\
+&\propto \pi^{k+a}(1-\pi)^{n-k+b}\\
+\end{split}
+$$
+
+Thus our posterior is a Beta distribution with updated parameters $a^*=k+a+1$ and $b^* = n-k+b+1$.
+
+### Aside - Conjugate Priors
+This type of relationship, between the Binomial and Beta distributions, has historically been very important in Bayesian statistics. We say that the Beta distribution is a **conjugate prior** to the Binomial distribution. More generally, if we have a prior of Distribution A, and a likelihood of Distribution B, then A and B are conjugate if the posterior is also of type A. 
+
+Conjugate priors used to matter quite a lot, because they made Bayesian computation possible. Now that computers exist they matter a little less, but many of the most common Bayesian models will still use conjugate priors.
+
+So our Beta prior is all well and good, but how do we choose it's parameter values $a$ and $b$? Well, recall that we can kind of think of these quantities as representing the number of successes and failures in $a+b$ trials (recall that with the uniform prior our updated $a^*=k+1$ and $b^*=n-k+1$). We can use this intepretation to select a prior.
+
+When $a+b$ (which we can think of as our "prior sample size") is large, then this will be a *highly* informative prior, and when $a>b$ then it will favor values of $\pi > .5$. Conversely if $a+b$ is small, then the prior will be closer to the uniform distribution, and if $a<b$ then our prior will favor $\pi < .5$:
+
+```{r}
+prior1 = dbeta(pi.grid, 25, 50) # high a+b, b>a
+prior2 = dbeta(pi.grid, 1, 2) # low a+b, b>a
+prior3 = dbeta(pi.grid, 50, 25) # high a+b, a>b
+prior4 = dbeta(pi.grid, 2, 1) # low a+b, a>b
+
+plot(pi.grid,prior1,type='l',xlab='pi',ylab='Prior Density')
+lines(pi.grid,prior2,col='red')
+lines(pi.grid,prior3,col='blue')
+lines(pi.grid,prior4,col='green')
+legend(x='topright',c('a=25,b=50','a=1,b=2','a=50,b=25','a=2,b=1'),fill=c('black','red','blue','green'))
+```
+
+This interpretation of the prior parameters enables us to encode our prior beliefs. Say that our friend tells us that the coin is twice as likely to be heads than tails. We would therefore choose a Beta prior where $a=2b$. However, depending on how much we trust our friend, make this prior more or less informative. Let's look at the posteriors we'd obtain with priors $a=2,b=1$, $a=10,b=5$, and $a=100,b=50$. Say that we have performed $n=20$ trials, and observed $k=13$ successes:
+```{r}
+prior1 = dbeta(pi.grid,2,1)
+prior2 = dbeta(pi.grid,10,5)
+prior3 = dbeta(pi.grid,100,50)
+
+k=13
+n=20
+post1= prior1*(pi.grid^(k))*(1-pi.grid)^(n-k)
+post2= prior2*(pi.grid^(k))*(1-pi.grid)^(n-k)
+post3= prior3*(pi.grid^(k))*(1-pi.grid)^(n-k)
+
+plot(pi.grid,post1/sum(post1),type='l',col='red',xlab='pi',ylab='Posterior Density')
+lines(pi.grid,post2/sum(post2),col='blue')
+lines(pi.grid,post3/sum(post3),col='green')
+legend(x='topright',c('a=2,b=1','a=10,b=5','a=100,b=50'),fill=c('red','blue','green'))
+```
+
+As we might expect, a more informative prior has the same effect on our posterior distribution as collecting more data. In this way, a prior literally encodes the information that you are bringing to the analysis before sampling data. 

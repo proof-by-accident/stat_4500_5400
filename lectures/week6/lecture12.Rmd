@@ -1,0 +1,448 @@
+---
+title: "Lecture 12"
+author: "Peter Shaffery"
+date: "2/21/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Mea Culpa: Code Error in Last Week's Lecture
+
+```{r, warning=FALSE, message=FALSE}
+library(tidyverse)
+library(magrittr)
+library(broom)
+library(car)
+
+educ = read.csv('../../data/education.csv')
+educ %>% head
+
+# we don't need the wls.weights variable for now, so drop it
+educ %<>% select(-wls.weights)
+mod.dat = educ %>% select(-state)
+mod = lm(educ~.,data=mod.dat%>% mutate('region'=as.factor(region)))
+
+# for an explanation of GVIF see https://stats.stackexchange.com/questions/70679/which-variance-inflation-factor-should-i-be-using-textgvif-or-textgvif/96584
+vif(mod)
+summary(mod)
+```
+
+# Example: Wine
+
+Recall the wine dataset that we looked at last week:
+```{r}
+wine = read.csv('../../data/wine.csv')
+wine['age'] = 1972-wine$vintage
+wine %>% head
+
+plot(wine$age, wine$price)
+```
+
+During our discussion of how to model the relationship between between $AGE$ and $PRICE$ in this data, we arrived at the following model: 
+$$
+\text{PRICE}_i = \exp{(\beta_0 + \beta_1 \text{AGE}_i)} \exp(\epsilon_i)
+$$
+
+One of the primary reasons we had chosen this model was hat it enabled us to apply linear regression, after first transforming the data:
+$$
+\ln{\text{PRICE}_i} = \beta_0 + \beta_1 \text{AGE}_i + \epsilon_i
+$$
+This model had some drawbacks, however. Primarily, it forced us to assume that (on the PRICE scale) the random errors were log-normally distributed and (more importantly) *multiplicative*. 
+
+Multiplicative errors are not necessarily "wrong", but they may be an inappropriate modeling assumption. For example:
+$$
+\begin{split}
+\text{Var}[\text{PRICE}_i] &= \text{Var}\left[ \exp{ \left( \beta_0 + \beta_1 \text{AGE}_i \right)} \exp{\epsilon}_i  \right]\\
+&= (\exp{ \left( \beta_0 + \beta_1 \text{AGE}_i \right)})^2 \text{ Var}\left[  \exp{\epsilon}_i  \right]\\
+&= \exp{ 2\left( \beta_0 + \beta_1 \text{AGE}_i \right)} \text{ Var}\left[  \exp{\epsilon}_i  \right]\\
+\end{split}
+$$
+Thus (as we saw with the prediction intervals last week) multiplicative errors imply that the variance of PRICE increases exponentially with AGE:
+```{r}
+wine$lprice = log(wine$price)
+mod.log = lm(lprice~age, data=wine)
+
+plot.df = mod.log %>%
+  augment(interval='prediction') %>%
+  mutate('.fitted'=exp(.fitted),'lower'=exp(.lower),'upper'=exp(.upper)) %>%
+  select(age,.fitted,lower,upper) %>%
+  rename('exp.fit'=.fitted) %>%
+  reshape2::melt(id.vars=c('age','upper','lower'))
+
+plot.df['price'] = wine$price
+
+ggplot(plot.df, aes(x=age,)) +
+  geom_line(aes(y=value)) +
+  geom_ribbon(aes(ymin=lower,ymax=upper), alpha=.15) +
+  geom_point(aes(y=price)) + 
+  labs(x='AGE',y='PRICE')
+
+```
+
+I briefly mentioned that an alternative model, which does not include the assumption of multiplicative error, would be:
+
+$$
+\text{PRICE}_i =\exp{(\beta_0 + \beta_1 \text{AGE}_i)} + \epsilon_i
+$$
+
+Where $\epsilon$ is some suitable random variable with mean 0.
+
+Such a model would sidestep the increasing variance:
+$$
+\begin{split}
+\text{Var}[\text{PRICE}_i] &= \text{Var}\left[ \exp{ \left( \beta_0 + \beta_1 \text{AGE}_i \right)} +\epsilon _i  \right]\\
+&= \text{Var}\left[ \epsilon _i  \right]\\
+\end{split}
+$$
+
+And furthermore would have interpretation that we are used to for linear regression (that is, thinking in terms of "average effects"):
+$$
+E[\text{PRICE}_i] = \exp{ \left( \beta_0 + \beta_1 \text{AGE}_i \right) }
+$$
+
+So why don't we use this model instead? Well, it's not linearizable, that is we can't write in the form:
+$$
+y_i = \vec{x}_i^T \vec{\beta} + \epsilon_i
+$$
+
+For any definition of $x_i$ and $y_i$. 
+
+Why is linearity of model so important? Well, the form of a linear model was essential to us being able to perform maximum likelihood estimation. Recall that (from the normality of $\epsilon_i$) we were able to write the log-likelihood:
+$$
+l(\vec{\beta}; \vec{x}_i, y_i) \propto -\sum_i (y_i - \vec{x}_i^T \vec{\beta})^2
+$$
+
+And that we were able to maximize this function *analytically*; that is, we could take the derivative with respect to each element of $\vec{\beta}$, set it to 0, and then solve.
+
+Let's look at the likelihood for the model:
+$$
+\text{PRICE}_i = \exp{\left(\beta_0 + \beta_1 \text{AGE}_i\right)} + \epsilon_i
+$$
+
+Where $\epsilon_i$ is normally distributed with variance $\sigma^2$. 
+
+Immediately we see that:
+$$
+\text{PRICE}_i \sim N(\exp{\left(\beta_0 + \beta_1 \text{AGE}_i\right)}, \sigma^2)
+$$
+
+Thus the likelihood for the full dataset is:
+$$
+L(\beta_0, \beta_1; \text{AGE}_i, \text{PRICE}_i) = \prod\limits_{i=1}^n  N(\exp{\left(\beta_0 + \beta_1 \text{AGE}_i\right)}, \sigma^2)
+$$
+
+And so when we convert to the log-likelihood scale, we get:
+$$
+l(\beta_0, \beta_1; \text{AGE}_i, \text{PRICE}_i) = \propto -\sum_i (y_i - \exp{\left(\beta_0 + \beta_1 \text{AGE}_i\right)})^2
+$$
+
+Can we still find values for $\beta_0$ and $\beta_1$ which maximize $l(\beta_0, \beta_1; \text{AGE}_i, \text{PRICE}_i)$? Well, not analytically (try setting the derivative to 0 and solving!), and if this were 1972 that would be basically the end of it. However, in 2021 we have gotten **very** good at *numerical optimization*.
+
+Numerical optimization is a field of math which studies how to *approximately* maximize or minimize a function in some variables. Rather than trying to take the derivative and solve for 0, numerical optimization applies iterative algorithms to produce a series of guesses at the function inputs which maximize the function output. Ideally after running these algorithms for a number of loops, we wind up with a something very close to the true maximizing input values.
+
+We won't be covering numerical optimization in any detail in this course (see the Appendix for a quick overview of a core algorithm, the Newton-Raphson method), however we will be using it quite a lot. Pretty much any statistical program worth its salt provides some kind of functionality for performing numerical optimization. In R one such function is `optim`.
+
+Let's see how we could use numerical optimization to fit our non-linearizable model:
+```{r}
+# by default, optim minimizes the input function so work on the negative log-likelihood scale
+neg.log.likelihood = function(b,x,y){
+  b0 = b[1]
+  b1 = b[2]
+  
+  y.hat = exp(b0 + b1*x)
+  resids = y - y.hat
+  sse = sum(resids^2)
+  
+  return(sse)
+}
+
+age = wine$age
+price = wine$price
+
+first.guess = c(0,0)
+mle = optim(first.guess,
+            neg.log.likelihood,
+            x=age,
+            y=price)
+
+mle
+```
+
+This output is telling us that (among other things) our optimization concluded successfully (`convergence=0`), and that the MLEs for this model are approximately $\hat{\beta_0}=1.3$ and $\hat{\beta}_1=.03$:
+
+```{r}
+beta0.hat = mle$par[1]
+beta1.hat = mle$par[2]
+
+price.hat = exp(beta0.hat + beta1.hat*age)
+
+plot(age,price,xlab='AGE',ylab='PRICE')
+lines(age,price.hat)
+lines(age,exp(predict(mod.log)),col='red')
+```
+
+In this example, the two models (additive or multiplicative error) have very similar predictions. In general, this may not be the case. 
+
+# Generalized Linear Models
+
+The model that we have just fit belongs to a larger class of statistical models called *Generalized Linear Models*.
+
+Given a dependent variable $y_i$, and a vector independent variables $\vec{x}_i$, a generalized linear model is any model which can be written in the form:
+$$
+g(E[y_i]) = \vec{x}_i^T \vec{\beta}
+$$
+Or, equivalently:
+$$
+E[y_i] = g^{-1}(\vec{x}_i^T \vec{\beta})
+$$
+In our previous example the function $g(y) = \log{(y)}$
+
+**NOTE:** generalized linear models are different from the linearizing transformations we saw last week. Among other things, a linearizing transformation $g'$ is applied to the observations $y_i$ direcly, whereas here it is being applied to the expected value $E[y_i]$. These are generally not the same thing (see the example above).
+
+The function $g$ is known as the **link function** and it, alongside the choice of distribution for the $y_i$ completely defines a particular choice of generalized linear model (GLM):
+
+GLM Name | $g$ | Distribution of $y_i$
+--------:|:-----:|:-----
+Linear Regression | $g(z)=z$ | Normal
+Logistic Regression | $g(z) = \text{logit}(z)$ | Binomial 
+Poisson Regression | $g(z)=\log{(z)}$ | Poisson
+Neural Network* | $g(z) = \text{a stack of perceptrons}$ | Normal (or Laplace maybe)
+
+\* *technically this is a Generalized* **Additive** *Model (GAM), which is a special type of GLM that we'll talk about near the end of the GLM section of the course*
+
+# The Exponential Family of Distributions
+
+Broadly speaking, basically any function $g$ can be a link function. The primary limits here are:
+
+a. *What is interpretable* 
+b. *What is computationally tractable*
+
+More limiting here is the density function of the $y_i$ (what we can think of as our "error distribution"). Specifically, we need to pick something that belongs to the **exponential family of distributions**.
+
+## Definition
+
+A member of the exponential family of distributions if it's density function can be written as:
+
+$$
+\begin{split}
+f(y;\theta) &= s(y) t(\theta) \exp{ \left[ a(y) b(\theta) \right]}\\
+&= \exp{ \left[ a(y) b(\theta) + c(\theta) + d(y)\right]}\\
+\end{split}
+$$
+Where $a(y)$, $b(\theta)$, $s(y) = \exp{d(y)}$ and $t(\theta) = \exp{c(\theta)}$ are basically any functions (be reasonable). If $a(y)=y$ then $b(\theta)$ is called the *natural parameter* and the function is in *canonical form*.
+
+## Properties
+
+A nice thing that's true for all probability distributions is:
+
+$$
+\int f(y;\theta) dy = 1
+$$
+(Swap integral for sum if $y$ is discrete)
+
+By taking the derivative $\frac{d}{d \theta}$ on both sides, we see that an immediate consequence of this is :
+
+$$
+\begin{split}
+\frac{d}{d \theta} \int f(y,\theta) dy &= \frac{d}{d \theta} 1\\
+\int \frac{d}{d \theta}  f(y,\theta) dy &= 0 \\
+\end{split}
+$$
+
+Applying this result to the exponential family gives us a nifty (and useful!) result:
+
+$$
+\begin{split}
+\frac{d f(y;\theta)}{d \theta} = [a(y) b'(\theta) + c'(\theta)] f(y;\theta)
+\end{split}
+$$
+Integrating both sides with respect to $y$ gives us:
+
+$$
+\begin{split}
+\int [a(y) b'(\theta) + c'(\theta)] f(y;\theta) dy =  E[a(y)|\theta] b'(\theta) + c'(\theta) = 0
+\end{split}
+$$
+And thus:
+
+$$
+E[a(y)] = \frac{ -c'(\theta)}{b'(\theta)}
+$$
+A similar argument can be used to find an expression for $\text{Var}[a(y)]$ (though it's kind of grody, see IGLM page 49).
+
+The real reason that **we** care about the exponential family is because of it's log likelihood. Observe that (for a single data point) the log-liklihood is simply:
+
+$$
+l(\theta; y) = \log{f(y;\theta)} = a(y)b(\theta) + c(\theta) + d(y)
+$$
+
+Even more importantly, we can compute the *derivative* of the log-likelihood:
+
+$$
+\frac{d}{d \theta} l(\theta; y) = a(y)b'(\theta) + c'(\theta)
+$$
+
+This relationship is very important, because recall that we want to *maximize* the log-likelihood, which occurs at the point $\hat{\theta}$ when:
+
+$$
+\frac{d}{d \theta} l(\hat{\theta}; y) = a(y)b'(\hat{\theta}) + c'(\hat{\theta}) = 0
+$$
+Indeed, this relationship is *so* important that we will give the derivative $\frac{d}{d \theta} l(\theta; y)$ it's own name, **the score function**:
+
+$$
+U(\theta; y) = \frac{d}{d \theta} l(\theta; y) = a(y)b'(\theta) + c'(\theta)
+$$
+An interesting this about the score function, is that through its dependence on the random variable $y$, it is *also* a random variable (much like how $\hat{\beta}$ was a random variable when performing inference for linear regression). This (and all of the other properties mentioned today) is going to come up next lecture, when we talk about how we can perform inference with GLMs.
+
+# Binomial Distribution
+
+Imagine you have a coin that, if flipped, lands "heads" p\% of the time. If you flip the coin $n$ times, what is the probability of getting $k$ "heads" outcomes?
+
+This is the interpretation of the Binomial Distribution:
+
+$$
+\text{Binom}(k;p,n) = {n\choose k} p^k (1-p)^{n-k}
+$$
+
+The Binomial distribution is one of the most common distributions you'll see in statistical modeling (as well as Machine Learning), as it is the "error distribution" for logistic regression. 
+
+When $n=1$ then the the binomial distribution is sometimes referred to as the "Bernoulli" distribution.
+
+Here we will look at showing that the binomial is in the exponential family, as well as showing a few of the properties outlined above.
+
+## Exponential Family
+Let's use $f(y;\theta)$ to denote the binomial PMF (where $\theta = p$ and $y=k$):
+$$
+f(y;\theta) = {n \choose y} \theta^y (1-\theta)^{n-y}
+$$
+Some algebra then gives us:
+
+$$
+\begin{split}
+f(y;\theta) &= \exp{ \left[ \log{ \left( {n \choose y} \theta^y (1-\theta)^{n-y} \right) } \right] }\\
+&= \exp{ \left[ \log{ {n \choose y}} + y \log{(\theta)} + (n-y) \log{(1-\theta)} \right]}\\
+&= \exp{ \left[  y (\log{(\theta)} - \log{(1-\theta)}) + n\log{(1-\theta)}+ \log{ {n \choose y}} \right]}\\
+&= \exp{ \left[  y \log{\frac{\theta}{1-\theta}} + n\log{(1-\theta)}+ \log{ {n \choose y}} \right]}\\
+&= \exp{ \left[  a(y) b(\theta) + c(\theta)+ d(y) \right]}\\
+
+\end{split}
+$$
+
+Since  $a(y)=y$ here we see that the "natural parameter" for the binomial distribution is $b(\theta) = \log{\frac{\theta}{1-\theta}}$. This natural parameter is referred to as the log-odds of the distribution (since it is the logarithm of the odds ratio) and will be **super important** next week when we talk about logistic regression.
+
+## Properties
+Let's just quickly take a peek at some of the properties of the binomial PMF as a member of the exponential family.
+
+First, let's see:
+$$
+E[a(y)] = \frac{-c'(\theta)}{b'(\theta)}
+$$
+Since the exponential form of the binomial distribution is canonical, then this is the same as looking at $E[y]$.
+
+It's not hard to convince yourself that the expected value of the binomial distribution is:
+
+$$
+E[y] = n \theta
+$$
+So we want to show that:
+$$
+n\theta = \frac{-c'(\theta)}{b'(\theta)}
+$$
+Let's compute the derivatives of $b$ and $c$:
+
+$$
+\begin{split}
+b'(\theta) &= \frac{d}{d \theta} \log {\frac{\theta}{1 - \theta} }\\
+&= \frac{d}{d \theta} [ \log{\theta} - \log{(1 - \theta)}]\\
+&= \frac{1}{\theta}  - \frac{-1}{1 - \theta}\\
+&= \frac{1}{\theta(1-\theta)}
+\end{split}
+$$
+$$
+\begin{split}
+c'(\theta) &= \frac{d}{d \theta} n\log {(1-\theta)}\\
+&= n \frac{d}{d \theta} \log {(1-\theta)}\\
+&= \frac{-n}{(1-\theta)}\\
+\end{split}
+$$
+Thus:
+
+$$
+\begin{split}
+\frac{-c'(\theta)}{b(\theta)} &= \frac{n/(1-\theta)}{1/\theta(1-\theta)} \\
+&= n\theta\\
+\end{split}
+$$
+
+Let's also quickly look at the log-likelihood for the Binomial distribution with a single observation:
+$$
+L(\theta;y) = {n \choose y} \theta^y (1-\theta)^{n-y}
+$$
+And thus:
+$$
+l(\theta;y) = y \log{\frac{\theta}{1-\theta}} + n\log{(1-\theta)} + \log{n \choose y}  =a(y)b(\theta) + c(\theta) + d(y)
+$$
+And the score function also gets the form you'd expect:
+$$
+U(\theta;y) = \frac{y}{\theta(1-\theta)} + \frac{n}{1-\theta} = \frac{y + n\theta}{\theta (1-\theta)}
+$$
+It's not an accident that $E[y] = n \theta$ show up in the above expression! Since $E[y] = \frac{-c'(\theta)}{b'(\theta)}$ we also have $c'(\theta) = E[y] b'(\theta)$, so the score function can be written:
+
+$$
+U(\theta;y) = b'(\theta) (y - E[y])
+$$
+*O\~o\~o\~h* that's sure suggestive of *something*! Boy I wonder where this is going...
+
+# Appendix A: The Newton-Raphson Algorithm
+
+Newtown-Raphson (NR) is an algorithm to find a *root* of a function $f(y)$. A root is any point $\hat{y}$ where $f(\hat{y})=0$.
+
+The NR algorithm does this by recursively computing a sequence of improved "guesses":
+
+$$
+y_{m+1} = y_m - \frac{f(y_m)}{f'(y_m)}
+$$
+As $m$ grows large, $|f(y_m)|$ goes to 0 *quadratically*, that is the error at the updated point $y_{m+1}$ decays as:
+$$
+|\hat{y} - y_{m+1}| \propto |\hat{y} - y_m|^2
+$$
+
+The right hand side of the recursion equation comes from a Taylor approximation. Recall that any function can be approximated by truncated series of polynomials:
+$$
+f(y) \approx f(a) + f'(a)(y-a) + f''(a)(y-a)^2 + ...
+$$
+
+If we set $a=y$ and $y=\hat{y}$, then at first order we have:
+
+$$
+\begin{split}
+f(\hat{y}) \approx f(y) + f'(y)(\hat{y}-y) \\
+0 \approx f(y) + f'(y)(\hat{y}-y) \\
+\end{split}
+$$
+We can then "solve" this approximate equation for $\hat{y}$ to get:
+$$
+\begin{split}
+-f'(y)(\hat{y}-y) &\approx f(y)\\
+\hat{y} - y &\approx \frac{-f(y)}{f'(y)}\\
+\hat{y} &\approx y - \frac{f(y)}{f'(y)}\\
+\end{split}
+$$
+Now, although this equivalance only hold for values of $y$ close to $\hat{y}$, by applying it recursively we ultimately improve our approximation.
+
+Although presented here as a root-finding algorithm, NR is most commonly applied to find a (local) max or min of a function $g(y)$. To do so we simply apply the NR algorithm to the *derivative* $f(y) = g'(y)$. In optimization contexts the recursion algorithm is sometimes presented in terms of $g$, rather than $f$:
+
+$$
+y_{m+1} = y_m - \frac{g'(y_m)}{g''(y_m)}
+$$
+
+In GLM applications NR is presented in terms of the *score function*:
+
+$$
+\theta_{m+1} = \theta_m - \frac{U(\theta)}{U'(\theta)}
+$$
+
+Where the first derivative of the score function $U'$ (the second derivative of the likelihood) is sometimes referred to as the *information*.

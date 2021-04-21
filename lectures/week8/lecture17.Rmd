@@ -1,0 +1,276 @@
+---
+title: "Lecture 17"
+author: "Peter Shaffery"
+date: "3/3/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+# borrows heavily from https://bookdown.org/roback/bookdown-BeyondMLR/ch-poissonreg.html#sec-overdispPois
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+```
+
+# Poisson Distribution
+
+The Poisson distribution describes random numbers of *counts*. Unlike the binomial distribution, which modelled counts of *successes* out of total *trials*, a Poisson random variable can go infinitely high. The PMF of a Poisson distribution is:
+$$
+f(y) = \frac{\lambda^y e^{-\lambda}}{y!}, \text{ } y=0,1,2,3,...
+$$
+
+The Poisson distribution has a single parameter $\lambda$, known as the **rate** parameter. When discussing this parameter, it is very important to pay attention to the units. For example, if you were modeling car crashes you then you may see $\lambda$ defined as the mean number of crashes, mean crashes per 100,000 miles driven, or mean crashes per 100,000 miles driven per year. 
+
+An unusual feature of the Poisson distribution is that $E[y] = \text{Var}[y] = \lambda$.
+
+# Poisson Regression
+
+The Poisson regression model is actually quite simple, there's really only one choice of link function that sees any use:
+$$
+g(E[y_i]) = \log{(E[y_i])}
+$$
+Hence the Poisson regression model can be written:
+
+$$
+E[y_i] = \exp{\left( \vec{x}_i \vec{\beta} \right)}
+$$
+
+## Deviance and Residuals
+
+Recalling that the Pearson residuals are defined:
+$$
+\chi_i = \frac{y_i - \hat{y_i}}{\sqrt{\text{Var}[y_i|\hat{\lambda_i}]}}
+$$
+We see that, since our estimate of $\hat{y}_i = E[y_i|\hat{lambda}_i] = \hat{\lambda_i}$ (where $\hat{\lambda}_i = \exp{\vec{x}_i^T \hat{\beta}}$) and furthermore that $\text{Var}[y_i|\hat{\lambda}_i] = \hat{\lambda}_i$, then the Pearson residuals are simply:
+$$
+\chi_i = \frac{y_i - \hat{y_i}}{\sqrt{\hat{y}_i}} = \frac{y_i - \hat{\lambda_i}}{\sqrt{\hat{\lambda}_i}}
+$$
+Similarly the deviance can be written:
+$$
+\begin{split}
+D &= 2 \sum_i y_i \log{(y_i/\hat{y_i})}  - (y_i - \hat{y_i})\\
+&= 2 \sum_i y_i \log{(y_i/\hat{\lambda_i})}  - (y_i - \hat{\lambda_i})\\
+\end{split}
+$$
+Which gives us deviance residuals:
+$$
+\begin{split}
+D_i &= \text{sign}(y_i-\hat{y}_i) \sqrt{2 y_i \log{(y_i/\hat{y_i})}  - (y_i - \hat{y_i})}\\
+&= \text{sign}(y_i-\hat{\lambda}_i)  \sqrt{2 y_i \log{(y_i/\hat{\lambda_i})}  - (y_i - \hat{\lambda_i})}\\
+\end{split}
+$$
+
+# Example: Household Size
+The Philippine Statistics Authority (PSA) surveys households in the Phillipines every three years. One set of data collected is the number of individuals living in a household, other than the "head of household" (HoH). The PSA would like to understand how the age of the head of the household relates to the number of individuals living there.
+
+```{r}
+library(tidyverse)
+library(magrittr)
+
+dat = read.csv('../../data/households.csv')
+dat %>% head
+```
+
+Variable | Def'n
+----|:----
+LOCATION | Region where house is located
+AGE | The age of the HoH
+TOTAL | Number of individuals living in house other than HoH 
+NUMLT5 | Number of individuals under 5 years of age
+ROOF | Type of roof on the house (Light or Strong, proxy for household wealth)
+
+
+```{r}
+hist(dat$total,xlab='Total')
+```
+
+Let's fit a quick model, just relating AGE to TOTAL:
+```{r}
+mod = glm(total~age, data=dat, family=poisson)
+summary(mod)
+plot(mod,which=c(1,5))
+```
+
+As with logistic regression, the coefficient has a special interpretation, known as the **rate ratio**:
+
+$$
+\text{RR} = \frac{E[y_i| \text{ AGE=a+1}]}{E[y_i| \text{ AGE=a}]} = \exp \beta_{AGE}
+$$
+
+In this example, $\beta_{\text{AGE}} \approx -.005$, so the rate ratio is $RR = \exp{(-.005)}=.995$. Hence, for every additional year of HoH age, the average household size decreases by about half a percent (.005). Put another way, we expect a $.5\%$ *increase* in household size for every *decrease* of HoH age by one year.
+
+Obviously we don't expect an infant to have the largest possible house size, so this prompts us to consider a *transformation* of the AGE variable. Specifically, we will include a *quadratic* term, so that $E[y_i]$ will be maximized for some middle value of AGE:
+
+```{r}
+dat %<>% mutate(age2 = age^2)
+mod = glm(total~age+age2, data=dat, family=poisson)
+summary(mod)
+plot(mod,which=c(1,5))
+```
+
+Although the regression table has performed a Wald test for us, let's perform a deviance hypothesis test anyways to determine if our new quadratic model is an improvement over the original linear model.
+
+Treating our linear model as a the "null" model, we have $D_0 = 2337$ and $D_1=2200$, giving us a $\Delta D = 137$. Furthermore, the degrees of freedom of our null model is $1498$, and of our alternate model is $1497$, hence under the null hypothesis we would expect $\Delta D \sim \chi^2(1)$. Using $\alpha=.05$:
+```{r}
+rejection.threshold = qchisq(.95,1)
+delta.d = 137
+print(delta.d > rejection.threshold)
+```
+And so we reject the linear model, in favor of the quadratic model (and by quite a lot).
+
+Let's do one more for good measure, now checking whether the addition of the LOCATION variable is of any use:
+```{r}
+dat %<>% mutate(age2 = age^2)
+mod = glm(total~age+age2+location, data=dat, family=poisson)
+summary(mod)
+plot(mod,which=c(1,5))
+```
+
+Because LOCATION is a dummy variable we now have no option to go by the Wald test, and have to use a deviance test instead.
+
+For the quadratic-only model we have $D_0 = 2200$ with $df = 1497$, and for the quadratic+location model we have $D_1 = 2187$ with $df=1493$. Hence under the null hypothesis we would expect $\Delta D = 13 \sim \chi^2(4)$. The p-value for this is:
+```{r}
+pchisq(13,4,lower.tail = FALSE)
+```
+
+Which is below our choice of $\alpha=.05$, so we reject the quadratic-only model in favor of the quadratic+location model.
+
+# Exposure
+
+There is an interesting relationship between the binomial and Poisson distributions. Say that we have a binomial distribution with *very* large $n$ (the number of trials) and *very* small $p$ (the probability of success). It turns out that if $y \sim \text{Binom}(p,n)$, then $y$ is approximately Poisson distributed with rate parameter $\lambda = np$. As $n$ grows larger, and $p$ grows smaller, this approximation becomes more and more exact.
+
+In practice, this relationship can be interpreted through **exposure**. Say that we are recording the occurence of a tree disease in different forest transects. You might imagine that larger transects have more incidence of disease. Even if this relationship isn't precisely binomial (in the sense that there is not a well-defined number of "trials" occurring), an *exposure model* allows us to account for this in our regression:
+
+$$
+\begin{split}
+E[y_i] &= n_i \theta_i\\
+\theta_i &= \exp{\left( \vec{x}_i^T \vec{\beta} \right)}\\
+\end{split}
+$$
+
+Or, equivalently:
+$$
+\log{E[y_i]} = \log{n_i} + \vec{x}_i^T \vec{\beta}
+$$
+
+Where the $\log{n_i}$ term is referred to as the **offset**.
+
+# Example: Campus Crime
+
+```{r}
+dat = read.csv('../../data/campus_crime.csv')
+dat$region = ifelse(dat$region=='SE','S',dat$region)
+dat$region = ifelse(dat$region=='SW','S',dat$region)
+dat %>% head
+```
+
+Variable | Def'n
+----|:----
+TYPE | **C**ollege or **U**niversity 
+NV | Number of violent crimes
+ENROLL1000 | University enrollment (in 1000s of students) 
+REGION | Location of school in US (C = Central, MW = Midwest, NE = Northeast, SE = Southeast, SW = Southwest, and W = West)
+
+```{r}
+mod = glm(nv ~ region + type, offset=log(enroll1000), data=dat, family=poisson )
+summary(mod)
+
+plot(mod,which=c(1,5))
+
+# Points 1,3, and 30 are highly influential, so cut
+dat = dat[-c(1,3,30),]
+mod = glm(nv ~ region + type, offset=log(enroll1000), data=dat, family=poisson )
+summary(mod)
+
+plot(mod,which=c(1,5))
+
+rate.ratios = exp(mod$coefficients)
+rate.ratios
+```
+# Overdispersion
+
+Recall that the Poisson model assumes that the mean and variance of the $y_i$ are equal. As with logistic regression, it is quite common for count data to be **overdispersed**, that is for the actual $\text{Var}[y_i]$ to be greater than $E[y_i] = \lambda_i$.
+
+We can quickly see that this is the case with the Campus Crime data:
+```{r}
+summ = dat %>% group_by(type,region) %>% summarize(mn=mean(nv),vr=var(nv))
+plot(summ$mn,summ$vr,xlab='Mean',ylab='Var')
+lines(seq(0,12,1),seq(0,12,1),lty=2)
+```
+
+One remedy is to use a model which assumes:
+
+$$
+\text{Var}[y_i] = \phi \lambda_i
+$$
+```{r}
+mod.quasipois = glm(nv ~ region + type, offset=log(enroll1000), data=dat, family=quasipoisson )
+summary(mod.quasipois)
+```
+
+## Negative Binomial Model
+
+Unlike with a Binomial model however, in Poisson we have a second (more elegant) option: a negative Binomial model.
+
+The "story" of the Negative Binomial distribution depends a little on who you ask. For the purposes of Poisson regression, it can be thought of as modeling a Poisson random variable, where the rate parameter $\lambda$ is **also random**. Specifically, if:
+
+$$
+\begin{split}
+y|\lambda &\sim \text{Pois}(\lambda)\\
+\lambda &\sim \text{Gamma}(r,\frac{1-p}{p})
+\end{split}
+$$
+Then $y \sim \text{NegBinom}(r,p)$ where $E[y] = \frac{pr}{1-p}$ and $\text{Var}[y]=\frac{pr}{(1-p)^2}=E[y]+\frac{E[y]^2}{r}$. In this case the addition of the $r$ parameter gives our model the extra flexibility it needs to allow for different variance and mean.
+
+Tragically, R does not include the Negative Binomial as an option for the `glm` function, so we'll need to use a package:
+
+```{r}
+mod.negbinom = MASS::glm.nb(nv ~ region + type + offset(log(enroll1000)), data=dat)
+summary(mod.negbinom)
+
+plot(mod.negbinom,which=5)
+```
+
+# Zero Inflation
+
+One more bit of weirdness which you may encounter in a Poisson regression is an overabundance of zero values. 
+
+For example, let's look at data taken from a survey of college students which included the question "How many alcoholic drinks did you consum last weekend?". This survey was conducted on a "dry campus", where no drinking was allowed even among students of legal drinking age. There will therefore be an unusually large number of students that report 0 drinks, which includes a **mixture** of students that *never* drink (form whom $y_i=0$ no matter how much we sample), as well as students who just didn't happen to drink this weekend (for whom a different sample might return $y_i>0$).
+
+```{r}
+dat = read.csv('../../data/weekend_drinks.csv')
+dat %>% head
+hist(dat$drinks)
+pmf = dpois(seq(0,20,1),mean(dat$drinks))
+pmf = 5*pmf/max(pmf)
+lines(pmf,col='red')
+```
+
+To account for the **inflated** number of 0s, we will introduce a new parameter $\alpha$ to our model, representing the proportion of *non-drinkers*, ie. students for whom $y_i=0$ no matter what. We will attempt to jointly estimate $\lambda$ (the mean number of drinks *among students who drink*) and $\alpha$. This type of model is referred to as a **zero-inflated Poisson** (ZIP) model.
+
+## Fitting
+
+The ZIP model belongs to a class of models known as **mixture models**. These are models which assume that the data are sampled from *more than one* underlying distributions. Unlike a basic Poisson regression, where all data points are simply drawn from a Poisson distribution, in a mixture model the sampling process looks like:
+
+1. Select an underlying distribution at random from $D_1$,...,$D_M$ with probabilities $\alpha_1$,...,$\alpha_M$ (*does this remind you of a distribution we learned about last lecture?*)
+2. Given a choice $D_m$, draw $y_i \sim D_m$
+
+In our ZIP model, $M=2$, with $D_1$ is just a spike at 0 and $D_2$ is the Poisson distribution. $\alpha_1=\alpha$ and $\alpha_2=1-\alpha$.
+
+Fitting ZIP models (and mixture models generally) is a little beyond the scope of this course, but the basic idea is fairly simple. Given some estimate of $\hat{lambda}_i$, you can make a reasonable guess at the number of zero counts which are due to the drinking population, ie. $1-\alpha=\text{Pois}(0,\hat{\lambda}_i)$. You can then use this guess of $1-\alpha$ to construct a likelihood for $\alpha$. We now subtract $\alpha$ percent of the zeros from the data, re-estimate $\hat{\lambda}_i$, and iterate.
+
+As with the negative binomial model, base R does not give us an option for a ZIP model, so we will use a fitting function provided by the `pscl` package. For this model we actually need to specify **two** models, one for $\lambda$ (which includes a student's sex and whether they live off campus), and one for $\alpha$ (which here uses first-year status as a proxy for age)
+```{r}
+mod.zip = pscl::zeroinfl(drinks ~ off.campus + sex|first.year, data = dat)
+summary(mod.zip)
+
+mod.nozip = glm(drinks ~ off.campus + sex, data = dat, family=poisson)
+summary(mod.nozip)
+
+exp(mod.zip$coefficients$count)
+exp(mod.nozip$coefficients)
+```
+
+Note that the ZIP model table returns two sets of coefficients to us. The first are the Poisson regression coefficients, and the second are the coefficients which determine $\alpha$.
+
+We see that the ZIP model has really changed our estimated rate of drinking. In the base model (without zero inflation), we had assumed the "baseline" rate of drinking was about one drink per weekend, with off campus students drinking at over twice that rate. However, having accounted for zero inflation we now see that the trend is basically reversed. Off campus students appear to be drinking less than on-campus students.
+
+Note that we **cannot** compare these models using a deviance hypothesis test, since the models are non-nested. Other statistical tools exist for this comparison (eg. a Vuong test), but these are beyond the scope of the course.
