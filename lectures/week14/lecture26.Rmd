@@ -1,270 +1,362 @@
 ---
 title: "Lecture 26"
 author: "Peter Shaffery"
-date: "4/20/2021"
+date: "4/8/2021"
 output: html_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+knitr::opts_chunk$set(echo = TRUE, warnings=FALSE, message=FALSE)
 ```
 
-# Bayesian Logistic Regression
+# Introduction to Missing Data
 
-The Bayesian approach to GLMs is more less what you would expect, given what we've seen with linear regression. Let's look at performing a Bayesian logistic regression using the titanic dataset.
+*Lectures follow chapters of "Statistical Analysis with Missing Data" (Little and Rubin, 2002)*
 
-Recall that, with this dataset, the outcome of interest $y_i=1$ indicates passenger survival. The liklihood for this model is:
+One of the most common problems "data problems" you will face in statistical analysis is *missing data*. Missing data are what they sound like, datapoints which have incomplete information about one or more units in our analysis. 
 
-$$
-L(\vec \beta; y_i, \vec x_i) = \prod_{i=1}^n \left[ \text{logit}^{-1}(\vec x_i^T \vec \beta) \right]^{y_i} \left[ 1-\text{logit}^{-1}(\vec x_i^T \vec \beta) \right]^{1-y_i}
-$$
-## Choosing Priors
-
-Now, one way that logistic regression *does* differ from linear regression is in the choice of priors, because we have to be a little careful if we choose priors which are too wide.
-
-For an example, say that we would like to fit the model:
-
-$$
-y_i \sim \text{Bernoulli}( \text{logit}^{-1}(\beta x_i ))
-$$
-Where $\beta$ and $x_i$ are both scalars. Let's place a normal prior on $\beta$, and look how that prior transforms to the probability scale $\pi = \text{logit}^{-1}(\beta x_i)$ when $x_i=1$:
+Consider, for example, the titanic dataset
 
 ```{r}
 library(tidyverse)
 library(magrittr)
-library(reshape2)
 library(rstanarm)
 
-inv.logit = function(x){ 1/(1+exp(-x)) }
-
-prior1 = rnorm(1000,0,1e3) %>% inv.logit
-prior2 = rnorm(1000,0,1e1) %>% inv.logit
-prior3 = rnorm(1000,0,2.5) %>% inv.logit # the default normal prior used by rstanarm
-
-plt.df = data.frame(prior1, prior2, prior3) %>% melt
-
-ggplot(plt.df, aes(x=value,fill=variable)) +
-  geom_histogram(position='identity',alpha=.3)
+dat=read.csv('../../data/titanic.csv')
 ```
 
-Looking at the histogram, we see that a supposedly "uninformative" prior over $\beta$ turns out to be *highly* informative for $\pi_i$. The problem here is that $\beta$ is unbounded, but $\pi_i$ is not: large positive values of $\beta$ get mapped to $\pi_i \approx 1$, and large negative values get mapped to $\pi_i \approx =0$. If our prior tails are too heavy, favoring large values of $\beta$ (relative to the scale of $x_i$!) then this will produce a prior over $\pi_i$ that favors only 0 and 1. Depending on your data (particularly how many observations you have), this can strongly impact your priors.
 
+# Computational Side 
 
-## Fitting
-As you might expect, `rstanarm` also provides functions for fitting Bayesian GLMs:
+Missing data is commonly represented in computer records by the letters `NA`, meaning "Not Available". R treats `NA` as a special quantity, which has it's own rules and operations:
+```{r}
+NA + 1
+NA == 1
+NA == NA
+c(NA,1)
+paste(NA,'foo',sep='')
+```
+
+Notice in that last example, the command `paste` (which concatenates strings, `paste('a','b',sep=',')` outputs `"a,b"`) doesnt treat `NA` as "missing data", but actually converts it to a string. This is one of the most annoying things that can happen with `NA`s: they will sometimes be converted (or recorded) as "string NAs", `"NA"` (or even worse, `"na"`). This *does not* have the special properties of `NA` and will be the bane of your existence if you're not careful about checking for them:
+```{r}
+is.na('NA')
+is.na(NA)
+```
+One way to keep track of all these is to use a judicious application `dplyr::na_if`:
+```{r}
+bad.dat = data.frame(
+  'idx'=c(1,2,3),
+  'missing1'=c(NA,'a','b'),
+  'missing2'=c('what','the','na')
+  )
+
+bad.dat %>% 
+  na_if('na')
+```
+
+To further complicate matters, sometimes `NA`s will be represents using `NaN` (or `Nan` or `nan`), meaning "Not a Number".
 
 ```{r}
-dat = read.csv('../../data/titanic.csv') %>% drop_na
-dat$pclass %<>% as.factor()
-dat %>% head
+is.nan(NaN)
+is.nan(NA)
+```
 
-mod = stan_glm(survived~pclass+sex+age+sibsp+parch+fare, data=dat, family=binomial, prior=normal(location=0,scale=2.5), refresh=0) # rstanarm auto-scales independent variables and converts 
+This one is a pain to handle:
+```{r}
+nightmare.dat = data.frame(
+  'idx'=c(1,2,3),
+  'missing1'=c(NA,'a','b'),
+  'missing2'=c(2.43,NaN,31.4),
+  'missing3'=c('what','the','na')
+  )
+
+nightmare.dat %>% 
+  na_if(NaN) %>%
+  na_if('na')
+
+```
+
+In general, it's fine to just keep true `NaN`s as they occur, because in most situations they will behave sufficiently like `NA`s to not cause problems, but be aware that these are different concepts.
+
+Once you've cleaned up your `NA`s, the next step is to determine how prevalent they are. One very useful tool for this are "missing data patterns":
+```{r}
+library(mice) # "Multiple Imputation by Chained Equations
+library(VIM) # Visualization and Imputation of Missing Data
+
+aggr(dat) # VIM version
+md.pattern(dat, rotate.names=TRUE) # mice version
+
+dat %<>% drop_na(-age)
+```
+
+In the `titanic` dataset we see that AGE variable has the highest amount of missingness by far.
+
+# Statistical Models with Missing Data
+
+In the past we've dealt with missingness by simply dropping the rows that have missing values:
+
+```{r}
+# clearly age matters
+mod = glm(survived ~ sex + as.factor(pclass) + sibsp + age + fare, data=dat%>%drop_na, family=binomial)
 summary(mod)
-plot(mod)
 ```
 
-We can also look at what happens to our estimates under a more diffuse prior:
+This strategy for dealing with missing data analysis is referred to as **complete case analysis**. While it is certainly the *easiest* way of dealing with missing data, it does have some drawbacks.
+
+For one, we're dumping a lot of data, 263 rows is like 20\% of the dataset, and that's kind of as waste. Moreover, we may be losing important information:
+```{r}
+dat %>% group_by(sex,pclass) %>% summarize(sum(is.na(age)))
+```
+
+The missingness here is imbalanced across categories! Therefore the decision to ignore the missing data could bias our inference regarding these (or other) independent variables.
+
+What we need is a technique that will allow us to handle the missingness of some data. There are many possible ways that we could do so. The choice of method, and it's ultimate efficacy, hinges on the **missing data mechanism**; how the data came to be missing in the first place.
+
+# Missingness Mechanisms
+
+Missingness mechanisms fall into three important categories:
+
+1. **Not Missing at Random (NMAR)**
+2. **Missing At Random (MAR)**
+3. **Missing Completely at Random (MCAR)**
+
+In order to define these categories rigorously, we have to first introduce some notation.
+
+Say that we have a dataset $D$, which includes both our vector of dependent variables (outcomes) $\vec y = [y_1,...,y_n]^T$, as well as our matrix of independent variables $X = [\vec x_1,...,\vec x_n]^T$. Furthermore, say that for some of the observations $D_i = \texttt{NA}$, which means that $y_i$ or an element(s) of $\vec x_i$ are missing.
+
+Now, we'll define a second "missingness vector" $\vec m = [m_1,...,m_n]^T$, where $m_i=\begin{cases}1, D_i = \texttt{NA}\\0, D_i \neq \texttt{NA}\\  \end{cases}$. We will interpret $\vec m$ as a "mask" for the data: when $m_i=1$ we are prevented from knowing the true value of $D_i$. Furthermore, we will sometimes use $\vec D_{\text{obs}}$ and $\vec D_{\text{mis}}$ to denote the observed and missing components of the data.
+
+The reason we define the missingness vector $\vec m$ separately, is that it allows us to endow it with a probability distribution which depends both on a parameter(s) $\phi$, as well as on the data itself $\vec y$:
+
+$$
+\vec m \sim P[ \vec m | D, \phi]
+$$
+Thinking about missing data in this way, as a random variable with a distribution that can be estimated or learned about, is the core of statistical imputation. Moreover, we can use the specific form of $P[ \vec m | \vec y, \phi]$ to differentiate between different types of missingness mechanisms.
+
+## Not Missing at Randoms
+
+NMAR data is the worst case, and depending on context may just not be addressable from a statistical point of view. NMAR data is defined by a missingness mechanism of the form:
+
+$$
+\vec m \sim P[ \vec m | \vec D_{\text{mis}}, \phi]
+$$
+A simple example of this would be $y_i \sim N(\mu,\sigma^2)$, where we want to estimate $\mu$ and $\sigma^2$. Now, let's say that due to a flaw in our measuring tool, there is a threshold $\tau$, and if $y_i>\tau$ then $y_i$ is set equal to `NA`. Clearly:
+
+$$
+m_i \sim P[y_i > \tau] = \int_{\tau}^{\infty} N(y_i; \mu, \sigma^2) d y_i
+$$
+
+For a more realistic example, say that we are performing some experiment on mice in three age groups, and that we expect age to be an important determinant of individuals' response to the treatment. If our new lab intern screws up some component of the data collection process, and all of the samples in the oldest age category are contaminated, there's not much you can do to recover that data.
+
+NMAR data can be further broken down into two cases: data which is *censored* (where the specifics of the missing data mechanism, eq. $\tau$) are known, and data which are not censored. 
+
+Censored data can sometimes be dealt with by incorporating the knowledge of the censoring mechanism into the model likelihood. One example of this is longitudinal medical studies, where patients who survive long enough often just drop out of a study. You can still use their last known survival time as a component in the analysis.
+
+On the other hand, if the censoring mechanism is unknown to you, then you're pretty much out of luck. In this case the only recourse (besides collecting new data) is complete case analysis: dropping the portions of the data which were excluded, and being explicit about that constraint in your analysis. 
+
+
+## Missing Completely at Random
+
+At the other end of the spectrum is MCAR data. This is defined by a missingness mechanism that has no dependence on the data:
+
+$$
+\vec m \sim P[\vec m | \phi]
+$$
+MCAR data is the best case, because it impacts your sample size and nothing else. Consider again the example of our clumsy intern, except this time it's just a random 10% of the individual outcomes which are contaminated, rather than any particular age group. Since the samples in each age group are iid, this is effectively just a reduction in the number of measurements within each group. So long as our initial sample size was sufficiently large, we should be fine to just ignore the missing data and perform a complete case analysis. 
+
+## Missing at Random
+
+Most of the time missing data will not fall into either extreme, but will instead be just MAR. Data which is MAR has the missingness mechanism:
+
+$$
+\vec m \sim P[\vec m| D_{\text{obs}},\phi]
+$$
+That is, the missingess of either $y_i$ or $m_i$, depends on some variable which we have measured and which is never missing.
+
+One example of this is our `titanic` dataset:
+```{r}
+dat %>% group_by(sex,pclass) %>% summarize(sum(is.na(age)))
+```
+
+We see that the missingess of AGE has clear dependence on the variables SEX and PCLASS, both of which are completely observed (except for like one case which we'll just ignore).
+
+Another way that we could assess this is through a margin plot:
+```{r}
+marginplot(dat[,c('age','fare')])
+marginplot(dat[,c('age','pclass')])
+```
+
+While with NMAR and MAR data our main tool was complete case analysis (or special methods, in the case of censored NMAR data), with MCAR data we have a few other options which are more appropriate:
+
+1. *Weighting Methods:* Estimate $\pi_i = P[m_i| D_{\text{obs}},\phi]$, and then use it to weight the data in some smart way. For example, say that we have iid normal data $y_i$, with dependent variable $x_i$ which is equal to 0 or 1. Say that the missingness mechansim is $P[m_i=1|x_i=0] = .25$ and $P[m_i=1|x_i=1] = .75$. The "correct" estimate of the normal mean $\mu$, is the weighted sample mean $\hat mu = \frac{1}{n} \sum_i \bar \pi_i^{-1} y_i$, where $\bar \pi_i$ are just the normalized weights $\pi_i = \frac{\pi_i}{\sum_i \pi_i}$. You will sometimes hear $\pi_i$ referred to as the **design weights** (this is a common technique in survey analysis to deal with nonresponse)
+
+2. *Imputation Methods:* Use your knowledge $P[m_i| D_{\text{obs}},\phi]$ to generate samples of *synthetic data*, $\hat D_{\text{mis}}$. You then treat these samples as if they were "real" measurements, and fit your model with the sampled data $\hat D = [D_{\text{obs}},\hat D_{\text{mis}}]$ . Typically this is done as part of a **multiple imputation** strategy, where you create a few different samples $\hat D^{(i)}$, and then you average the resulting model coefficients obtained from each $\hat D^{(i)}$ This is the strategy that we will focus on for the rest of lecture.
+
+3. *Model-Based Methods:* Incorporate your knowledge of $P[m_i| D_{\text{obs}},\phi]$ directly into your model likelihood (like with the censored data mentioned above). This is a very rich approach to missing data problems, but because its so contextual we won't be able to give it much space here. For a detailed discussion check out Parts II and III of the textbook mentioned at the top of the lecture.
+
+# Imputation
+
+The idea with imputation is that we will "fill-in" the missing data with some reasonable guesses, and then fit our model to the filled-in dataset. What differentiates the varieties of imputation is *how* you fill in the data. Very broadly, these method fall into two classes: **explicit** method, where you actually fit a statistical model for the missing data, and **implicit** methods, where you use observed data as a "surrogate" for the model.
+
+## Explicit Methods
+
+### Mean Imputation
+
+The simplest way of imputing missing data is to just construct some suitable subgroups in your data, and replace missing data with subgroup-level means. For the titanic dataset, a crude implementation of this strategy would look like:
 
 ```{r}
-mod.diffuse = stan_glm(survived~pclass+sex+age+sibsp+parch+fare, data=dat, family=binomial, prior=normal(location=0,scale=100), refresh=0 ) 
-mod.diffuse.lowN = stan_glm(survived~pclass+sex+age+sibsp+parch+fare, data=dat%>%head(50), family=binomial, prior=normal(location=0,scale=100), refresh=0 ) 
+age.mn = dat %>%
+  group_by(sex,pclass) %>%
+  transmute(age.mn = mean(age,na.rm=TRUE)) %>%
+  ungroup %>%
+  select(age.mn)
 
+dat$age.imputed = coalesce(dat$age,unlist(age.mn))
+
+mod.mean.imputed = glm(survived ~ sex + as.factor(pclass) + sibsp + age.imputed + fare, data=dat, family=binomial)
+coefficients(mod)
+coefficients(mod.mean.imputed)
 ```
 
 
-# Model Selection
+### Regression Imputation
 
-Bayesian statistics has a couple of tools available for comparing models. 
+Fit a regression model for the missing variable(s) to some other variables of interest, and then impute missing data with the predicted regression mean. This method is conceptually identically to the above, except it also incorporates continuous predictors, as well as categorical (ie. group labels):
 
-## Bayes Factors
-
-**Caveat:** Bayes Factors are nice if you're trying to make Bayesian statistics look like Frequentist statistics, but in practice they are not popular outside of some niche cases. Presented here for completness more than "best practice".
-
-One of the oldest Bayesian model comparison tools are Bayes Factors. The idea here is a little self-referential: we're going to apply Bayes theorem to our choice of *models*, as well as our choice of parameters.
-
-Say that we have two models $M_1$ and $M_2$, which we want to compare. These models can theoretically be anything (non-nested, different distributions, etc.) so long as both posteriors are **proper**, ie. integrable. Each model includes a parameter (vector) $\theta_1$ and $\theta_2$, but note that the model is defined by the parameters plus everything else (choice of prior, choice of likelihood function form, etc.) so $\theta_i$  
-
-Before we've observed any data, we have prior beliefs $P[M_1]$ and $P[M_2]$ that each model is "correct". Now, say that we observe some set of data denoted $D$. We would like to compute the posterior probability:
-
-$$
-P[M_i|D] = P[D|M_i]P[M_i]
-$$
-
-But how can we compute $P[D|M_i]$? It turns out to actually be a quantity that we're already familiar with:
-
-$$
-P[D|M_i] = \int P[\theta_i|D,M_i] P[\theta_i|M_i] d \theta_i
-$$
-Where $\theta_i$ is the parameter (vector) corresponding to each model, $P[\theta_i|D,M_i]$ is the model likelihood, and $P[\theta_i|M_i]$ is the prior over $\theta_i$. Observe that this is just normalizing factor of the posterior!
-
-$$
-P[\theta_i | D, M_i ] = \frac{P[D|\theta_i, M_i] P[\theta_i|M_i]}{P[D|M_i]}
-$$
-
-We now see why this quantity is termed the "evidence": it represents the overall likelihood of the data under a given model. Another term for this quantity is therefore the **marginal likelihood**, in analogy with the marginal posterior quantity which we've already seen.
-
-Having computed the marginal likelihood for both models, we can now compare between the two models. To do so we use the ratio of their posterior probabilities:
-
-$$
-\begin{split}
-\frac{P[M_1|D]}{P[M_2|D]} &= \frac{P[D|M_1]P[M_1]}{P[D|M_2]P[M_2]}\\
-&= \frac{P[D|M_1]}{P[D|M_2]} \frac{P[M_1]}{P[M_2]}\\
-&= BF \times \frac{P[M_1]}{P[M_2]}\\
-\end{split}
-$$
-
-The quantity $BF = \frac{P[D|M_1]}{P[D|M_2]}$ is referred to as the Bayes Factor. Since we are typically indifferent between $M_1$ and $M_2$ initially, then it is reasonable to set $P[M_1] = P[M_2]$. In this case, when $BF > 1$ then $M_1$ is preferred, and when $BF<1$ then $M_2$ is preferred.
-
-Computing the Bayes Factor can be done in a few ways. There's at least one package which integrates with `rstanarm` called `bayestestR`. However here I'll just compute the Bayes Factor by hand.
-
-Since, as with the marginal likelihood, the Bayes Factor can be written as a
-
-Let's use the Bayes Factor to determine if the "family" variables, `sibsp` and `parch` are helpful for predicting survival rates:
 ```{r}
-marg.like = function(mod){
-  ll = log_lik(mod) %>% apply(.,1,sum) # log_lik extracts the model likelihood for each sample and datapoint pair
-  return(ll %>% exp %>% mean)
+plot(dat$sibsp,dat$age) # introduce a non-categorical variable to differentiate from subgroup mean approach
+age.mod = lm(age~sex+as.factor(pclass)+sibsp, data=dat%>%drop_na)
+age.reg = predict(age.mod,newdata=dat)
+
+dat$age.imputed = coalesce(dat$age,age.reg)
+
+mod.reg.imputed = glm(survived ~ sex + as.factor(pclass) + sibsp + age.imputed + fare, data=dat, family=binomial)
+coefficients(mod)
+coefficients(mod.reg.imputed)
+```
+
+### Stochastic Regression Imputation
+
+As above, fit a regression model for the missing variable(s). However rather than using predicted regression mean, draw a sample from the full forecasting distribution for each missing datapoint. The idea here is to incorporate some additional uncertainty into the imputation, through the residuals.
+
+```{r}
+set.seed(12345)
+age.mod = lm(age~sex+as.factor(pclass)+sibsp, data=dat%>%drop_na)
+sigma = sd(resid(age.mod))
+age.stoch.reg = predict(age.mod,newdata=dat) + rnorm(nrow(dat), 0, sigma)
+
+dat$age.imputed = coalesce(dat$age,age.stoch.reg)
+
+mod.stoch.reg.imputed = glm(survived ~ sex + as.factor(pclass) + sibsp + age.imputed + fare, data=dat, family=binomial)
+coefficients(mod)
+coefficients(mod.stoch.reg.imputed)
+
+dat %<>% select(-age.imputed)
+```
+## Implicit Methods
+
+### Hot Deck Imputation
+
+The only implicit method that we will look at today is **hot deck** imputation. Unlike the explicit methods, which constructed a concrete model for the AGE variable, *implicit* method will sidestep the modeling stage. The idea here is that we will instead use the data itself as our "model". 
+
+Say that we have a datapoint $D_{\text{mis}}^*$, which contains some missing data that we would like to impute. The hot deck approach does so in two steps:
+
+1. Using the non-missing components of $D_{\text{mis}}^*$, select (usually at random) a **donor** datapoint $D_{\text{donor}}$ which has no missing data
+2. Fill in the missing components of $D_{\text{mis}}^*$ using the corresponding components of $D_{\text{donor}}$
+
+For a single datapoint, we might implement this as:
+```{r}
+set.seed(12345)
+
+D.star = dat[is.na(dat$age),] %>% sample_n(1)
+
+donor.sex = D.star$sex
+donor.pclass = D.star$pclass
+candidate.donor = (dat$sex==donor.sex)&(dat$pclass==donor.pclass)
+
+D.donor = dat[candidate.donor,] %>% sample_n(1)
+D.star.imputed = coalesce(D.star, D.donor)
+```
+
+Now, both steps 1 and 2 can be done in a lot of different ways. Donor candidates are usually select from a pool of "similar" candidates, but similarity can be measured in a lot of different ways. Similarly, how you pick a donor once you've got your candidate pool can vary a lot. You might choose donors weighted by similarity. You might choose different donors to impute different columns. It's pretty much all up for grabs.
+
+In general, rather than making all these decisions yourself, it's simplest to just use some pre-designed packages:
+
+```{r}
+reg.imputed = VIM::regressionImp(age~sex+pclass+fare, data=dat)
+reg.imputed %>% head
+
+hd.imputed = VIM::hotdeck(dat,variable='age',domain_var=c('sex','pclass'))
+hd.imputed %>% head
+
+knn.imputed = VIM::kNN(dat,variable='age')
+knn.imputed %>% head
+
+marginplot(knn.imputed[,c('age','fare','age_imp')],delimiter='_imp')
+```
+
+# Multiple Imputation
+
+## Bootstrapping
+
+Aside from implicit vs explicit, there is one other main distinction between imputation techniques: *random* techniques (stochastic regression or hot deck), and *deterministic* techniques (regression imputation or `VIM::kNN`).
+
+In general, while deterministic method are simpler, theoretically they have some drawbacks. Primarily, they don't give you any sense of how much your particular choice of imputed values effects your final model estimates. In some particular cases you can derive standard errors, but it adds a bit of computational baggage.
+
+Random imputation techniques, on the other hand, do not have this drawback. By sampling multiple versions of the same imputed data, you can fit the model to each sample and get an approximate distribution of your model coefficients under the sampling distribution of the **imputed data**.
+
+When this distribution varies a lot, it indicates that your imputation is injecting a lot of uncertainty into the model, whereas when this distribution is fairly consistent then imputation doesn't matter that much:
+
+```{r}
+impute.and.fit = function(dat){
+  dat.imputed = VIM::hotdeck(dat, variable='age', domain_var = c('sex','pclass'))
+
+  mod.imputed = glm(survived ~ sex + as.factor(pclass) + sibsp + age + fare,
+                    data=dat.imputed,
+                    family=binomial)
+  
+  return(as.numeric(coefficients(mod.imputed)))
+  
 }
 
-mod.nofam = stan_glm(survived~pclass+sex+age+fare, data=dat, family=binomial, prior=normal(location=0,scale=2.5), refresh=0)
+samps = matrix(0,nrow=10,ncol=7)
+for (i in 1:10){
+  samps[i,] = impute.and.fit(dat)
+}
 
-margin.like = mod %>% marg.like
-margin.like.nofam = mod.nofam %>% marg.like
-
-bf = margin.like/margin.like.nofam
-
-print('The Bayes Factor is:')
-print(bf)
+apply(samps,2,mean)
+apply(samps,2,sd)
 ```
 
-We see that, according to the Bayes Factor, the family variables are really important! Notice that this does not guarantee that both 
+Now, we do need to be a little careful about defining what we're estimating here. Recall that, for a single imputed dataset $D^{(i)}_{\text{imp}}$, our resulting coefficient estimate $\hat \beta^{(i)}$ has some uncertainty due to just the estimation process, which we assess using it's standard error $s.e.(\hat \beta^{(i)})$. This is **not** the same thing as the changes in $\hat \beta$ due to the imputation, which we measured above.
 
-The Bayes Factor can be understand as the Bayesian version of the likelihood ratio statistic, which was the foundation for the deviance hypothesis test. Like the deviance hypothesis test, it will indicate that a group of variables is important so long as any one of them matters. But be aware that this does not mean that *every* variable is important:
+To distinguish between these concepts we will define the **within-imputation** variance of $\hat \beta^{(i)}$, $W_i = s.e.(\hat \beta^{(i)})^2$, and the **between-imputation** variance of, $B = \frac{1}{m} \sum_{i=1}^m (\hat \beta^{(i)} - \bar \beta)^2$ (where $\beta \beta$ is just the mean of the $\hat \beta^{(i)}$.)
+
+Because the imputation process has introduced this extra uncertainty $B$ into our estimate $\hat \beta$, we cannot simply use $s.e.(\hat \beta_i)$ to eg. perform a hypothesis test. We need to combine $W_i$ and $B$ in an appropriate way to properly represent our uncertainty of $\hat \beta$.
+
+The formula for this is actually quite simple:
+
+$$
+T = (\frac{1}{m} \sum_{i=1}^m W_i) + \frac{m+1}{m}B = \bar W + \frac{m+1}{m}B
+$$
+
+This is called the **total variance** of $\bar \beta$, and allows us to compute a final standard error for our mean coefficient vector $s.e.(\bar \beta) = \sqrt{T}$. For sufficiently large datasets, it can be shown that $\bar \beta$ is approximately normal, and so we can, for example, compute confidence intervals using our usual t-statistic.
+
+While it's possible to do this all by hand, in practice it's kind of a pain, so as usual we will instead use a package's workflow, in this case `mice`:
 
 ```{r}
-mod.nosibsp = stan_glm(survived~pclass+sex+age+fare+parch, data=dat, family=binomial, prior=normal(location=0,scale=2.5), refresh=0)
-margin.like.nosibsp = mod.nosibsp %>% marg.like
+vars = c('survived','age','pclass','sex','sibsp')
 
-mod.noparch = stan_glm(survived~pclass+sex+age+fare+sibsp, data=dat, family=binomial, prior=normal(location=0,scale=2.5), refresh=0)
-margin.like.noparch = mod.noparch %>% marg.like
+# we don't want mice to use the survived variable to impute age, so we'll construct a predictor matrix which prevents this
+pred.mat = matrix(1,nrow=length(vars),ncol=length(vars))
+pred.mat = pred.mat - diag(length(vars))
+pred.mat[1,] = 0
+pred.mat[,1] = 0
 
-print('The Bayes Factor for sibsp alone is:')
-print(margin.like.nosibsp/margin.like.nofam)
-
-print('The Bayes Factor for parch alone is:')
-print(margin.like.noparch/margin.like.nofam)
+# By default, mice uses an imputation method called Predictive Mean Matching (PMM)
+# The specifics of this imputation strategy are a little complicated, but it's like hot deck in that it identifies "similar" donors and randomly uses their values to impute 
+dat.imputed = mice(dat[vars], predictorMatrix=pred.mat) 
+mods.imputed = with(data=dat.imputed, expr = glm(survived ~ age + as.factor(pclass) + sex + sibsp, family=binomial))
+mod.mi = pool(mods.imputed)
+summary(mod.mi)
 ```
-
-## Predictive Metrics
-
-Bayes Factors have a couple of problems that make them challenging to use in some practical cases. For example, when choosing between two point values of a continuous parameters, Bayes Factors are not appropriate. 
-
-In these cases, it is better to use model selection criteria which assess a model's *predictive performance*. There are two commonly used types of such criteria. The first are the Information Criteria (IC), which includes the AIC (Akaike Information Criterion) that we've already seen. In general, you can understand this family of model selection tools as attempting to *approximate* the predictive performance of a model, without actually performing cross-validation. The second approach is then just to *actually* perform cross-validation, and specifically Leave-One-Out Cross-Validation (LOO-CV). 
-
-Both the IC and LOO-CV are trying to estimate the same quantity: *expected log-posterior density* (ELPD), which is the "natural" Bayesian choice for measuring out-of-sample data.
-
-Say that, given some data $t$, we have obtained a *predictive posterior density*, defined last lecture as $P[\tilde y | y] = \int P[\tilde y|\theta] P[ \theta | y] d \theta$. Moreover, say that the *true* probability density of the data is $\tilde y \sim f(\tilde y)$. We now define the ELPD as: 
-
-$$
-ELPD = E_{\tilde y \sim f}[ \log P[\tilde y | y] ] = \int \log P[\tilde y | y] f(\tilde y) d \tilde y
-$$
-
-This quantity can be thought of as measuring how closely the *predictive posterior distribution* lines up with the *true distribution*. When the ELPD is *large*, then that means that our posterior belief over the values of $\tilde y$ closely lines up with reality (our beliefs are "well calibrated"). When the ELPD is *small*, then values of $\tilde y$ which we think are very likely, actually happen rarely in real life.
-
-The main difference between the IC and LOO-CV is then just how you actually estimate ELPD:
-
-* Estimate ELPD by computing the *within-sample* predictive performance, which by itself overestimates ELPD, and then add a correction term. For historical reasons, these will all be of the form $-2 \left( \hat \text{ELPD})$. Because of the $-2$ scaling factor, with IC **smaller is better**. 
-
-* Estimate ELPD through cross-validation: leave some subset of the data out of the fitting process, and then average the predicted LPD over this holdout data 
-
-### Information Criteria
-
-There are four Information Criteria that you'll see used in the wild: Akaike (AIC), Deviance (DIC), Watanabe-Akaike (WAIC), and Bayes (BIC). Somewhat confusingly, that last one isn't actually used in Bayesian statistics, so we'll ignore it here. The AIC we have already seen used a few times, it is defined:
-
-$$
-AIC = -2 \left( \log P[y | \hat \theta_{\text{MLE}}] - k \right)
-$$
-
-The basic idea with the AIC is that it approximates the ELPD with the highest possible value of the log-likelihood, $\log P[y | \hat \theta_{\text{MLE}}] = \log \prod_{i=1}^n P[y_i|\hat \theta_{\text{mle}}]$. The correction term here is then just $k$. This criteria is nice because we can compute it for both Bayesian and Frequentist models, since it only depends on the model likelihood.
-
-The DIC is then like the Bayesian version of the AIC. It swaps out $\hat \theta_{\text{MLE}}$ for the posterior mean $\hat \theta_{\text{Bayes}}$, and replaces $k$ with a quantity called the **effective number of parameters**. The DIC is "better" from the Bayesian standpoint, but can't be computed for non-Bayesian models so is kind of a niche tool.
-
-Compared to the AIC and the DIC, the WAIC is an extremely recent, with the main publication having been published in 2013. Despite it's novelty, the WAIC has rapidly gained popularity as the model selection tool of choice for Bayesian stats.. The underlying theory is fairly complex, but it can be ultimately thought of as just an improvement to the AIC and DIC, such that some problematic edge cases aren't a problem anymore. For this reason, WAIC is sometimes called the **Widely Applicable Information Criterion**. 
-
-Of these IC, the WAIC is the easiest to compute directly from `rstanarm` models:
-```{r}
-waic(mod)
-```
-
-### Cross Validation
-
-With the rise of ML and AI, cross-validation has become a popular tool for measuring model performance, and this extends to Bayesian statistics. It turns out that computing the ELPD using cross-validation is very natural for Bayesian models, although the actual algorithm is slightly more trouble to outline than it's worth. This becomes especially simple when, rather than applying k-fold cross validation (chunk up the data into k subsets, and hold each subset aside in turn), we instead apply Leave-One-Out cross-validation. 
-
-The idea of LOO-CV is to, one at a time, treat each point in the dataset as "training data". Basically fit the posterior for all of the data but one (denoted $y_{[-i]}$), and the compute the log posterior of the holdout point ($y_i$):
-
-$$
-LPD_i = \log P[y_{i} | y_{[-i]}] = \log \int P[y_{i} | \theta] P[\theta| y_{[-i]}] d \theta
-$$
-
-You then estimate the ELPD as:
-
-$$
-ELPD \approx \frac{1}{n} \sum_i LPD_i
-$$
-
-This quantity is *also* straightforward to compute from `rstanarm`:
-
-```{r}
-loo.mod = loo(mod)
-loo.nofam = loo(mod.nofam)
-loo.nosibsp = loo(mod.nosibsp)
-loo.noparch = loo(mod.noparch)
-```
-
-And there are additional functions to help you compare multiple models:
-```{r}
-loo_compare(loo.mod,loo.nofam,loo.nosibsp,loo.noparch) # this comparison includes smart estimates of the error in LOO-CV differences
-```
-
-# Bayesian Hierarchical Models
-
-The Bayesian approach to hierarchical modeling is, in many ways, more natural than the version which we have seen. From a mathematical point of view, the two are almost identical, but the interpretation is entirely different.
-
-Let's apply a Bayesian hierarchical *logistic* regression to the titanic dataset. We will use PCLASS as our pooling variable, and we will indicate which class a datapoint belongs to with the index $j$. First, let the vector $\vec x_i = [1, \text{SEX}_i, \text{AGE}_i, \text{SIBSP}_i]$ (ignoring the PARCH variable, per our previous analysis), and let the outcome $\text{SURVIVED}_{ij}$ be the survival status of the $i^{\text{th}}$ passenger in group $j$.
-
-Now, the full hierarchical model can be written:
-
-$$
-\begin{split}
-\text{SURVIVED}_{ij} &\sim \text{Bernoulli}( \text{logit}^{-1}( \vec x_i^T \vec \beta_j )  )\\
-\vec \beta_j &\sim N(\vec \mu_{\beta},\sigma_{\beta}^2 I)\\
-\vec \mu_{\beta} &\sim N(\vec \omega,\tau^2 I)
-\end{split}
-$$
-As with the hierarchical models that we have dealt with before, the coefficient vectors $\vec \beta_j$ are assumed to be random, however here there distribution can be interpreted in two ways:
-
-1. The interpretation we have seen before, as a "group level" error distribution that induces correlation between datapoints from the same group (recall our county-level radon examplee)
-2. The prior distribution under which all $\vec \beta_j$ are iid
-
-Moreover, we have introduced a *second* prior on top of our first prior. Recall that in hierarchical modeling function `lmer` $\vec mu_{\beta}$ was in fact estimated, we just didn't talk about how. In Bayesian hierarchical modeling we also must estimate $\vec \mu_{\beta}$, but now we'll do it the Bayesian way: by endowing it with it's **hyperprior**, and rolling it into the posterior distribution.
-
-The full, joint posterior over all model parameters now has the form (assuming the variance parameters $\sigma^2$ and $\tau^2$ are known, for simplicity):
-
-$$
-P[\vec \beta_j, \vec \mu_{\beta} | y_{ij}, \vec x_i] \propto P[y_{ij} | \vec \beta_j, \vec \mu_{\beta}, \vec x_i] \times P[\vec \beta_j | \vec \mu_{\beta}] \times P[\vec \mu_{\beta}]
-$$
-
-Typically we then *marginalize* this posterior, to remove $\vec \mu_{\beta}$:
-$$
-P[\vec \beta_j| y_{ij}, \vec x_i] = \int P[\vec \beta_j, \vec \mu_{\beta} | y_{ij}, \vec x_i] d \vec \mu_{\beta} 
-$$
-Let's fit a Bayesian hierarchical model in `rstanarm` and compare it to our winning non-hierarchical model:
-
-```{r}
-mod.hiearchical = stan_glmer(survived~(sex+age+fare+parch)|pclass, data=dat, family=binomial 
-                             , refresh=0)
-
-loo.hierarchical = loo(mod.hiearchical)
-loo_compare(loo.noparch, loo.hiearchical) # this comparison includes smart estimates of the error in LOO-CV differences
-```
-

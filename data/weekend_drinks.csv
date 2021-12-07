@@ -1,0 +1,78 @@
+"dorm","drinks","sex","first.year","off.campus"
+"mohn",0,"f",TRUE,FALSE
+"ytterboe",5,"f",FALSE,FALSE
+"larson",10,"m",FALSE,FALSE
+"rand",0,"f",FALSE,FALSE
+"thorson",0,"m",FALSE,FALSE
+"hillboe",3,"f",FALSE,FALSE
+"mohn",0,"f",TRUE,FALSE
+"ytterboe",0,"f",FALSE,FALSE
+"thorson",0,"m",FALSE,FALSE
+"melby",6,"m",FALSE,FALSE
+"ytterboe",22,"m",FALSE,FALSE
+"melby",0,"m",FALSE,FALSE
+"rand",4,"f",FALSE,FALSE
+"ytterboe",5,"m",FALSE,FALSE
+"larson",4,"m",FALSE,FALSE
+"hillboe",3,"f",FALSE,FALSE
+"thorson",0,"f",FALSE,FALSE
+"thorson",7,"m",FALSE,FALSE
+"larson",2,"m",FALSE,FALSE
+"larson",0,"f",FALSE,FALSE
+"mohn",3,"f",TRUE,FALSE
+"melby",0,"f",FALSE,FALSE
+"rand",2,"f",FALSE,FALSE
+"larson",0,"f",FALSE,FALSE
+"melby",0,"f",FALSE,FALSE
+"mohn",0,"m",TRUE,FALSE
+"thorson",4,"f",FALSE,FALSE
+"kildahl",0,"f",TRUE,FALSE
+"larson",0,"f",FALSE,FALSE
+"off campus",4,"f",FALSE,TRUE
+"ytterboe",2,"f",FALSE,FALSE
+"off campus",5,"f",FALSE,TRUE
+"rand",0,"m",FALSE,FALSE
+"mohn",1,"f",TRUE,FALSE
+"mohn",1,"f",TRUE,FALSE
+"larson",0,"f",FALSE,FALSE
+"melby",5,"m",FALSE,FALSE
+"ytterboe",2,"m",FALSE,FALSE
+"larson",3,"f",FALSE,FALSE
+"hillboe",0,"f",FALSE,FALSE
+"melby",3,"m",FALSE,FALSE
+"ytterboe",1,"f",FALSE,FALSE
+"thorson",1,"f",FALSE,FALSE
+"ytterboe",1,"f",FALSE,FALSE
+"mohn",2,"f",TRUE,FALSE
+"off campus",6,"m",FALSE,TRUE
+"rand",3,"f",FALSE,FALSE
+"larson",0,"f",FALSE,FALSE
+"thorson",2,"f",FALSE,FALSE
+"melby",0,"f",FALSE,FALSE
+"melby",3,"f",FALSE,FALSE
+"mohn",0,"f",TRUE,FALSE
+"mohn",0,"f",TRUE,FALSE
+"ytterboe",2,"f",FALSE,FALSE
+"off campus",0,"f",FALSE,TRUE
+"hillboe",0,"m",FALSE,FALSE
+"mohn",0,"f",TRUE,FALSE
+"melby",0,"f",FALSE,FALSE
+"melby",3,"f",FALSE,FALSE
+"larson",1,"f",FALSE,FALSE
+"mohn",0,"f",TRUE,FALSE
+"kittlesby",0,"m",TRUE,FALSE
+"kildahl",0,"f",TRUE,FALSE
+"kittlesby",0,"f",TRUE,FALSE
+"off campus",10,"m",FALSE,TRUE
+"larson",0,"m",FALSE,FALSE
+"melby",0,"f",FALSE,FALSE
+"melby",0,"f",FALSE,FALSE
+"thorson",0,"f",FALSE,FALSE
+"larson",0,"f",FALSE,FALSE
+"melby",1,"m",FALSE,FALSE
+"mohn",1,"f",TRUE,FALSE
+"mohn",5,"f",TRUE,FALSE
+"larson",1,"f",FALSE,FALSE
+"mohn",0,"f",TRUE,FALSE
+"off campus",5,"f",FALSE,TRUE
+"off campus",1,"f",FALSE,TRUE
