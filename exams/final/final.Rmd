@@ -1,0 +1,123 @@
+---
+title: "Final Exam"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Instructions
+
+*Due Date:* **Tuesday May 5th at 9am** (exams received after 9am will not be graded outside of remarkably extenuating circumstances)
+
+*This exam is worth 30% of your final grade, and will be graded out of 60 points* 
+
+* Please answer the following questions, and upload your responses to Canvas just as you would with a homework. In your submission, please include your written (or typed) responses, along with any code and coded outputs used to answer the following questions.
+
+* For the "Long Answer" section below you will need to download the `mesquite.csv`, `cigartttes.csv`, and `rodents.csv` datasets posted on Canvas alongside this exam
+
+* You may consult the internet, textbooks, or course notes, but **do not** collaborate with other classmates.
+
+* If you have questions about the interpretation of a question, or any other portion of the exam, please contact me as soon as possible to ensure that you receive a timely response.
+
+* While it is allowed to consult online sources (including Google) to answer any of the following questions, in order to maximize the educational value of the course I strongly recommend attempting to answer the questions independently first, before consulting any online sources. If you do consult an online source, be sure to read it thoroughly so that you understand why a statement is True or False. After the exam I will be happy to discuss any of the questions with you, so if you come across something that is unclear write it down and/or email me.
+
+## Part 1: True/False (1 point each)
+
+Please indicate whether you believe that the following statements are **True** or **False**. If you are hand-writing your response, please write out the complete word "True" or "False". If you are typing simply using "T" or "F" will be sufficient.
+
+1. The model deviance for a linear regression can only be estimated, not computed exactly from the data.
+
+2. Consider data $y_{ij}$, which are divided into $j=1,...,k$ groups, each containing $i=1,...,n_j$ datapoints. You are then given the hierarchical model $y_{ij} = \alpha_j + \epsilon_i$, where $\epsilon_i \sim N(0, \sigma^2_{\epsilon})$ and $\alpha_j \sim N(\mu_{\alpha},\sigma^2_{\alpha})$, and are told that $\sigma^2_{\alpha} < \sigma^2_{\epsilon}$. The estimates of $\alpha_j$ must therefore be approximately equal to the pooled estimate of $\alpha$ (the one obtained from the model $y_{ij} = \alpha + \epsilon_i$).
+
+3. Consider two models, $M_1$: $y_i = \beta_0 + \beta_1 x_{1,i} + \epsilon_i$ and $M_2$: $y_i = \beta_0 + \beta_1 x_{1,i} + \beta_2 x_{2,i} + \beta_3 x_{3,i} + \epsilon_i$. If, given some data $D=(y,X)$, the Bayes factor $\frac{P[M_1|D]}{P[M_2|D]}>>1$, and our priors are that $P[M_1] = P[M_2]$, then both $x_{2,i}$ and $x_{3,i}$ must be important for predicting $y_i$.
+
+4. In Bayesian statistics, the best prior is always the one which is the least informative.
+
+5. Unlike the deviance hypothesis test, the Bayes Factor can compare between non-nested models.
+
+6. Complete case analysis is only appropriate for cases where data is Missing at Random (MAR)
+
+7. Consider data $y_{ij}$, which are divided into $j=1,...,k$ groups, each containing $i=1,...,n_j$ datapoints. If the $y_{ij}$ within the same group $j$ are **not** independent of each other, then a hierarchical model (partially pooling at the group level) is **not** appropriate.
+
+8. In the context of Poisson models, overdispersion refers to data with a variance greater than its mean.
+
+9. Heteroskedasticity is not a problem for logistic regression
+
+10. In Bayesian models, the prior must always integrate (or sum) to 1 to produce valid estimates of model parameters.
+
+11. The variance of the maximum likelihood estimator depends on the first derivative of the score function
+
+12. With uniform priors, the Bayesian posterior mean estimate for the intercept and slope coefficients of a linear regression is the same as the maximum likelihood estimate.
+
+13. With uniform priors, the Bayesian posterior standard deviation for the intercept and slope coefficients of a linear regression is the same as the standard error of the maximum likelihood estimate.
+
+14. The OLS estimate $\hat \beta = (X^TX)^{-1} X^T \vec y$ (where $X$ is the usual matrix obtained by stacking the covariate vectors $\vec x_i = [1,x_{i1},...,x_{ik}]^T$ as rows) has the lowest variance of any estimator of the true coefficient vector $\vec \beta$.
+
+15. The natural parameter for a binomial distribution (over random variable $x$) is the probability of a "success", $\pi_i = Pr[x=1]$.
+
+16. A saturated model (a model with a parameter for every datapoint) is an example of a parametric model.
+
+17. The conjugate prior for a Binomial Distribution is another Binomial distribution
+
+18. Consider data $y_{ij}$, which are divided into $j=1,...,k$ groups, each containing $i=1,...,n_j$ datapoints. If some groups of data have only a small number of observations, $n_j$, then we should expect a partial pooling model for this data to be more effective than an unpooled model 
+
+19. When fitting a smoother to scatterplot data, more wiggliness corresponds to higher variance in the estimator  
+
+20. Statistical modeling is extremely cool B)
+
+## Part 2 - Long Answer
+
+### Problem 1: Mesquite (10 points)
+
+Mesquite is a small tree which grows in dry climates throughout the Americas. The `mesquite.csv` dataset contains measurements of 46 such trees, including the dimensions of the tree's canopy and the mass of leaves produced. 
+
+1. Propose and fit a multiple regression model which relates LEAFWT (the mass of leaves on each tree), to DIAM1 (the widest diameter of the canopy), DIAM2 (the narrowest diameter of the canopy), and CANHT (the vertical height of the canopy).
+2. Demonstrate that your model meets the assumptions of linear regression.
+
+### Problem 2: Cigarettes (15 points)
+
+The `cigarettes.csv` dataset contains state-level data on cigarette consumption, as well as a handful of demographic measurements:
+
+| Variable | Definition |
+|-|-|
+| AGE | Median of the state's population |
+| HS | Percentage of people over 25 years of age in a state who had completed high school |
+| INCOME | Per capita personal income for a state (in dollars) |
+| FEMALE | Percentage of population identified as "female" |
+| PRICE | Average price (in cents) of a pack of cigarettes in the state |
+| SALES | Number of packs of cigarettes sold in a state per capita |
+
+1. [3 points] Using noninformative priors (eg. by setting `prior=NULL` in `rstanarm::stan_lm`) propose and fit three **Bayesian** regression models relating SALES to the other variables in the dataset. Interpret all coefficients. 
+2. [6 points] Using a Bayesian model selection tool (either Bayes Factor, Information Criteria, or LOO-CV), select one of your three proposals as your final model.
+3. [6 points] Using your final model, plot a histogram of the posterior predictive distribution over SALES for the 51st state of Smolorado, which has variable values:
+
+| Variable | Value |
+|-|-|
+| AGE | 21 |
+| HS | 56 |
+| INCOME | 3500 |
+| FEMALE | 50.4 |
+| PRICE | 30 |
+
+### Problem 3 (15 points):
+
+The `rodents.csv` dataset pertains to rodent infestations in apartment buildings in New York City. Each row of the dataset contains information about a single apartment, including a `bldg` label indicating which building the apartment is in. It contains the following columns:
+
+| Variable | Definition |
+|-|-|
+|RODENTS| Binary variable indicating the presence (1) or absence (0) of rodents in an apartment |
+| UNITFLR | The floor of the building on which the apartment is located|
+| BROKENWIN | A binary variable indicating the presence (1) or absence (0) of broken windows in the apartment |
+| BROKENFLOOR | A binary variable indicating the presence (1) or absence (0) of broken or damaged flooring in the apartment |
+| INTCRACKS | A binary variable indicating the presence (1) or absence (0) of cracked walls in the apartment |
+| INTLEAKS | A binary variable indicating the presence (1) or absence (0) of a leaking ceiling in the apartment  |
+| PERSONRM | The ratio of people to rooms in the apartment |
+| BLDG | A label indicating in which building the apartment is located |
+
+1. (4 points) Fit a varying-intercept, hierarchical (ie. partially pooled or mixed effects) **logistic regression** which regresses the `rodents` variable against all other variables, using `bldg` as the grouping variable. Interpret the both the fixed and random effects coefficients.
+2. (3 points) Fit the same model as above, except using the complementary log-log link function instead of the logistic function (hint: `lme4::glmer` accepts the same arguments for `family` as the `glm` function).
+3. (3 points) Finally fit a non-hierarchical logistic regression model which does not include the `bldg` variable (ie. a pooled model).
+4. (5 points) Using a model selection criterion of your choice, compare between these three models. Discuss why you believe the best-performing model outperforms the other two.
+

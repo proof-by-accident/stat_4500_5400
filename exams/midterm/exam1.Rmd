@@ -1,0 +1,244 @@
+---
+title: "STAT 4400/5400 Midterm"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(magrittr)
+library(tidyverse)
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Instructions
+
+*Due Date:* **Tuesday March 23th at 4pm** (exams received after 4pm will not be graded outside of remarkably extenuating circumstances)
+
+*This exam is worth 30% of your final grade, and will be graded out of 60 points* 
+
+* Please answer the following questions, and upload your responses to Canvas just as you would with a homework. In your submission, please include your written (or typed) responses, along with any code and coded outputs used to answer the following questions.
+
+* For the "Long Answer" section below you will need to download both the `churches.csv` and `candy.csv` datasets posted on Canvas alongside this exam
+
+* You may consult the internet, textbooks, or course notes, but **do not** collaborate with other classmates.
+
+* If you have questions about the interpretation of a question, or any other portion of the exam, please contact me as soon as possible to ensure that you receive a timely response.
+
+* While it is allowed to consult online sources (including Google) to answer any of the following questions, in order to maximize the educational value of the course I strongly recommend attempting to answer the questions independently first, before consulting any online sources. If you do consult an online source, be sure to read it thoroughly so that you understand why a statement is True or False. After the exam I will be happy to discuss any of the questions with you, so if you come across something that is unclear write it down and/or email me.
+
+## Part 1: True/False (1 point each)
+
+Please indicate whether you believe that the following statements are **True** or **False**. If you are hand-writing your response, please write out the complete word "True" or "False". If you are typing simply using "T" or "F" will be sufficient.
+
+1. The covariance of random variable $X$ with itself, $\text{Cov}(X,X)$, can be negative.
+
+2. You are given a simple linear model $y_i = \beta_0 + \beta_1 X_i + \epsilon_i$. If the independent variable $x_i$ is transformed to $x_i'=100 \times x_i$ (ie. multiplied by a factor of 100), then the new coefficient $\beta_1'=100 \times \beta_1$, where $\beta_1'$ is defined as $y_i = \beta_0 + \beta_1' x_i'$ .
+
+3. You are given the simple linear model $y_i = \beta_0 + \beta_1 x_i$ . If the true covariance between the random variables $x$ and $y$ is positive, then the estimated value of $\beta_1$, $\hat{\beta}_1$, must also be positive.
+
+4. You are given a simple linear model $y_i = \beta_0 + \beta_1 x_i + \epsilon_i.$ If the null $H_0: \beta_1 = 0$ is not rejected based on the data used to fit this model, then the random variables $x$ and $y$ must be uncorrelated.
+
+5. If $x$ is correlated with $y$, and some third variable $z$ is correlated with $x$, then $z$ must also be correlated with $y$
+
+<!--
+Can the $F$-test for comparing models
+be used to test one-sided hypotheses about regression coefficients?
+
+Can the $F$-test be used to compare the following models:\\
+\centerline{$Y_i = \beta_0 + \beta_1 X_{1,i} + \beta_2 X_{2,i} + \epsilon_i\,\,\,\,\, $ 
+and 
+$\,\,\,\,\, Y_i = \beta'_0 + \beta'_1 (X_{1,i}+ X_{2,i}) + \epsilon'_i$ \,\, ?} \\
+Why or why not?
+-->
+
+
+6. Residuals can only be defined as $\epsilon_i = y_i-\hat{y}_i$.
+
+7. The residuals calculated for a linear regression model are correlated.
+
+8. The residuals calculated for a linear regression model all have the same variance.
+
+<!--
+9 The studentized residuals are not independent.
+9. In linear regression, we model the dependent variable via a linear function of predictors.
+-->
+
+9. In linear regression, the line of best fit (ie. the ordinary least squares regression line) always goes through the point $(\bar x, \bar y)$.
+
+<!--
+11. The model $Y = \beta_0 + \beta_1 X_1 + \beta_2 X_1^2  + \beta_1 X_2  + \varepsilon$ is a linear model.
+-->
+
+10. If in the model $y = \beta_0 + \beta_1 x_1 + \beta_2 x_2   + \epsilon$  the independent variables $x_1$ and $x_2$ are uncorrelated, then $\hat \beta_1$ and $\hat \beta_2$ are uncorrelated.
+
+11. You are given the model $y = \beta_0 + \beta_1 x_1 + \beta_2 x_2   + \epsilon$. Let $\hat \beta_1$ and $\hat \beta_2$ by the coefficient estimates produced by **multiple linear regression** of $y_i$ on $x_{1,i}$ and $x_{2,i}$. Let $\hat \beta_1'$ and $\hat \beta_2'$ by the coefficient estimates produced by **simple linear regression** of $y_i$ on $x_{1,i}$ and $x_{2,i}$, respectively. If the measured $\text{Cor}(x_{1,i},x_{2,i})=0$ , then $\hat{\beta}_1=\hat{\beta}_1'$ and $\hat{\beta}_2=\hat{\beta}_2'$
+
+12. The variance of a predicted value $\hat y =\hat \beta_0 + \hat \beta_1 x$ is smallest for $x = \bar x$.
+
+13. The confidence interval for a fitted (mean) value is wider than the corresponding confidence interval for a forecast (prediction).
+
+14. In a simple linear regression, a high $R^2$ indicates high correlation between $y_i$ and $x_i$.
+
+15. $R^2$ can be used for comparison of nested models, with higher $R^2$ indicating a better model. 
+
+16. In multiple linear regression, the overall $F$ test tests the hypothesis that $E(Y) = \beta_0$.
+
+<!--
+19. Correlation among predictors is the reason why marginal regression coefficients are not the same as the partial ones.
+-->
+
+17. Multicollinearity reflects the lack of information in the data to identify the individual effects of independent variables.
+
+18. Low pairwise correlations among predictor variables indicate that multicollinearity is not a problem.
+
+19. Say that we are performing logistic regression with the model $E[k_i] = \text{logit}^{-1}(\beta_0 + \beta_1 x_i)$. An estimated $\hat{\beta_1} = 2.5$ means that we can expect a unit increase in $x_i$ to increase $P[k_i]=1$ by a factor of roughly $12$.
+
+20. A generalized linear model $g(E[y]) = \vec{x}_i^T \vec{\beta}$ can always be fit by choosing the value of $\hat{\beta}$ which minimizes the score function.
+
+## Part 2: Long Answer 
+
+### Problem 1: Churches (30 points)
+
+The `churches.csv` dataset pertains to medieval churches (Gould 1973), built in a very wide range of sizes and shapes. Because of the limitations due to the use of stone as a building material, we might speculate that the relationship between various measurements of the churches will be very strong.  The data contains the perimeter (in **HUNDREDS** of meters, $m$) and area measurements (in **HUNDREDS** of square meters, $m^2$) for 25 post-Conquest Romanesque churches in Britain.
+
+Using the regression output below, answer the following questions. *Be extra careful with the units!*
+
+The church perimeter data:
+```{r}
+church = read.csv('../data/churches.csv')
+head(church)
+```
+
+The regression command and output
+```{r}
+mod = lm(area~perimeter, data = church)
+summary(mod)
+```
+
+
+1. (1 pt) Write out the fitted model and interpret all coefficients.
+
+2. (2 pt) Does the $R^2$ suggest that perimeter of the church
+ is a good predictor of its area? Explain (give a definition of  $R^2$).
+
+3. (2 pt) Test the significance of the effect of perimeter at 0.001 level (write out the hypotheses, the test statistic, and the test conclusion).
+
+4. (2 pt) What is the interpretation for the CI for the estimated coefficient of perimeter? Give a definition of the 95\% CI and explain its meaning in "plain language".
+
+5. (2 pt) Based on this model, what would be the estimated average area for a church whose perimeter is 500 meters?  What is the standard error of that estimate?
+
+6. (2 pt) Based on this model, What would be the distribution of the Area for a church whose perimeter is 500 meters?  What are its mean and variance?
+
+7. (3 pt) Consider the diagnostic plots below. They show (in descending order)
+  
+    i. A scatterplot of the church data with the fit linear model superimposed as a red, dotted line.
+
+    ii. The fitted values of linear model on the x-axis, and the model residuals on the y-axis. 
+
+    iii. The theoretical quantiles of a standard normal distribution on the x-axis, and the observed residual quantiles on the y-axis (ie. a "Q-Q Plot").
+    
+    iv. The fitted values of linear model on the x-axis, and the square-root of the absolute value of the standardized residuals on the y-axis
+    
+    v. The leverage of each data point on the x-axis, and the standardized residuals on the y-axis. The superimposed red lines indicate contours of Cook's Distance.
+
+Based on these plots, do you believe that the churches dataset violates any of the assumptions of simple linear regression? If so, which? Explain your answers.
+```{r}
+plot(church$perimeter, church$area, xlab='Church Perimeter', ylab='Church Area')
+abline(mod, col='red', lty=2)
+plot(mod)
+```
+
+8. (3 pt) Based on your answer above, propose a transformation of the variables in the model (besides the Box-Cox transformation). Explain your choice.
+
+9. (4 pt) Fit a model using your proposed transformation. Based on this model, what would be the estimated area for a church whose perimeter is 500 meters?  
+
+10. (1 pt) The Box-Cox transformation was found using maximum likelihood (see the results below).  Write out the appropriate transformation of the outcome variable (Area) based on the output provided. Note, the variable "lambda" is the exponent in the Box-Cox transformation, while the "perimeter" and "intercept" are the slope and intercept in the linear model using the Box-Cox transformed Area as the outcome.
+
+<!--
+TYPO: lambda should be ~.626
+-->
+
+```
+------------------------------------------------------------------------------
+        Area |      Coef.   Std. Err.      z    P>|z|     [95% Conf. Interval]
+-------------+----------------------------------------------------------------
+      lambda |   .6360019    .077472     8.21   0.000     .4841597    .7878442
+------------------------------------------------------------------------------
+   perimeter |   4.406093
+   intercept |  -1.701881
+-------------+--------------
+```
+
+11. (3 pt) Transform to the original scale of Area: write out the estimated regression equation on the original scale based on the Box-Cox output above. Provide an interpretation for all coefficients.
+
+12. (3 pt) What would be your estimate of the Area for for a church whose perimeter is 500 meters using the Box-Cox transformed model?  Give a numerical answer, and interpret the meaning of that estimate.
+
+13. (2 pt) Compare the estimated Box-Cox transform with your proposed transformed model from Question 8 earlier. Do they agree? Explain.
+
+### Problem 2: Candy (10 points)
+
+The `candy.csv` dataset pertains to Halloween candy (Hickey, 2017). It contains information on 85 different types of candy, including their flavor, ingredients, and price point. In this problem we will use binomial regression to predict whether a candy will contain chocolate (which we will code as a "success" under the binomial distribution).
+
+The variables are defined below:
+
+Variable | Definition
+---:|:---
+`name` | The name of the candy
+`chocolate` | A binary variable indicating whether the candy contains chocolate
+`fruity`| A binary variable indicating whether the candy has a "fruit flavor"
+`caramel` | A binary variable indicating whether the candy contains caramel
+`peanutyalmondy`| A binary variable indicating whether the candy contains peanuts, peanut butter, or almonds
+`nougat` | A binary variable indicating whether the candy contains nougat
+`crispedricewafer`| A binary variable indicating whether the candy contains a crisped rice wafer
+`pluribus` | A binary variable indicating whether the candy is sold as many small pieces in a box or bag (M&Ms are pluribus, while a Charleston Chew is not).
+`sugarpercent` | Which percentile of sugar content the candy falls into, relative to all other candies in the data set
+`pricepercent` | Which percentile of unit price the candy falls into, relative to all other candies in the data set
+`popularity` | A measure of a candy's popularity among the readership of FiveThirtyEight, and popular news and data website.
+
+The data looks like this:
+```{r, warning=FALSE}
+candy = read.csv('../data/candy.csv')
+head(candy)
+
+candy %<>% select(-name)
+```
+
+1. (3 pt) Below is the following regression table of a logistic regression of `chocolate` on `fruity`, `pluribus`, and `popularity`. Using the information in the table, write out the fitted model and interpret all coefficients.
+
+```{r}
+mod = glm(chocolate ~ fruity + pluribus + popularity, data=candy, family=binomial)
+summary(mod)
+```
+
+
+
+2. (2 pt) Using the information in the above table, test the significance of the effect of `pluribus` at the significance level $\alpha=.001$ (write out the hypotheses, the test statistic, and the test conclusion).
+
+3. (1 pt) Consider the Variance Inflation Factors (VIF) listed below. Based on these VIF scores, do you believe that multicollinearity is present in the data? Explain.
+```{r}
+car::vif(mod)
+```
+4. (2 pt) Consider the diagnostic plots below. They show (in descending order)
+  
+    i. The fitted values of linear model on the x-axis, and the model residuals on the y-axis. 
+
+    ii. The theoretical quantiles of a standard normal distribution on the x-axis, and the observed residual quantiles on the y-axis (ie. a "Q-Q Plot").
+    
+    iii. The fitted values of linear model on the x-axis, and the square-root of the absolute value of the standardized residuals on the y-axis
+    
+    iv. The leverage of each data point on the x-axis, and the standardized residuals on the y-axis. The superimposed red lines indicate contours of Cook's Distance.
+
+Based on these plots, do you believe that the dataset and model `chocolate ~ fruity + pluribus + popularity` violates any of the assumptions of a generalized linear model? If so, which? Are there any other problems with the data? Explain your answers.
+```{r}
+plot(mod)
+```
+
+5. (2 pt) The table below shows the deviance scores and degrees of freedom for two models:
+    i. *Model 1:* `chocolate ~ fruity + pluribus + popularity` (no ingredients)
+    ii. *Model 2:* `chocolate ~ fruity + pluribus + popularity + caramel + peanutyalmondy + nougat + crispedricewafer` (all ingredients)
+    
+Using a significance level of $\alpha=.05$, conduct a deviance hypothesis test to determine whether any of the ingredient variables should be included, ie. test whether Model 2 should be preferred over Model 1. 
+
+Model | Deviance | Deg. of Freedom
+---:|:---:|:---
+Model 1 | 32 | 87
+Model 2| 29.5 | 77
