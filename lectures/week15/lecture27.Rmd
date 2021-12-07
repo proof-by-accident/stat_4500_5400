@@ -1,0 +1,393 @@
+---
+title: "Lecture 27"
+author: "Peter Shaffery"
+date: "4/26/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+<!-- notes follow: http://gibbons.bio/courses/ps236/TreatmentIntro.pdf-->
+# Causal Modeling
+
+## Why Do We Include Multiple Covariates?
+
+Controlling for the (correct) covariates avoids **omitted variable bias**. Say that the true model for $\vec y$ is:
+
+$$
+\vec y = X \vec \beta + Z \vec \gamma + \vec \epsilon
+$$
+
+Now, imagine that we just regress $\vec y$ on $X$:
+$$
+\hat \beta = (X^TX)^{-1}X^T \vec y
+$$
+
+Hence, 
+$$
+\begin{split}
+\hat \beta &= (X^TX)^{-1}X^T (X \vec \beta + Z \vec \gamma + \vec \epsilon )\\
+&=  (X^TX)^{-1}(X^TX) \vec \beta + (X^TX)^{-1} X^TZ \vec \gamma + (X^TX)^{-1} \vec \epsilon )\\
+&= \vec \beta + (X^TX)^{-1} X^TZ \vec \gamma + (X^TX)^{-1} \vec \epsilon )\\
+\end{split}
+$$
+
+Thus:
+$$
+E[\hat \beta] = \vec \beta + E[(X^TX)^{-1} X^T Z] \vec \gamma
+$$
+
+Thus $\hat \beta$ is *biased* by a factor of $E[(X^TX)^{-1} X^T Z] \vec \gamma$. There are only two cases where this bias is equal to 0:
+
+1. The variables $\vec y$ and $Z$ are independent, ie. $\gamma = 0$
+2. The variables $X$ and $Z$ are uncorrelated, ie. $E[X^TZ]=0$ 
+
+## Causality
+
+So far all of the data that we have dealt with in this course has been *observational*: data collected about some data-generating process, but one whose behavior we are simply recording, not interacting with.
+
+Observational data can be valuable in the right context, and for some problems observational data is all that's available. However, observational data analysis has limits. In particular, it can be difficult to infer **causal** relationships from purely observational analysis.
+
+Causal relationships are ones which have a defined "direction", where one changing one variable (say $X$) reliably produces a change in another (say $Y$), but where the reverse does not (necessarily) hold. We often represent causal relationships using graphs:
+
+```{r, echo=FALSE}
+DiagrammeR::grViz("digraph {
+  graph [layout = dot, rankdir = LR]
+  
+  node [shape = rectangle] 
+  rec1 [label = 'X']
+  rec2 [label =  'Y']
+
+  # edge definitions with the node IDs
+  rec1 -> rec2
+  }", 
+  width = 200, height=75)
+```
+
+In above **ommitted variable bias** example, we have a causal relationship of the form:
+
+```{r, echo=FALSE}
+DiagrammeR::grViz("digraph {
+  graph [layout = dot, rankdir = LR]
+  
+  node [shape = rectangle] 
+  rec1 [label = 'X']
+  rec2[label='Z']
+  rec3 [label =  'Y']
+
+  # edge definitions with the node IDs
+  {rec1 -> rec2 rec2->rec1} -> rec3
+
+  }", 
+  width = 200, height=75)
+```
+In this example, we are *assuming* knowledge of the causal relationships, but in most cases this won't be the case. Consider a model which regresses a child's height against their weight. Which way does causation "flow"?
+
+```{r, echo=FALSE}
+DiagrammeR::grViz("digraph {
+  graph [layout = dot, rankdir = LR]
+  
+  node [shape = rectangle] 
+  rec1 [label = 'Height']
+  rec2[label='Weight']
+
+  # edge definitions with the node IDs
+  rec1 -> rec2 rec2->rec1 [label='?']
+
+  }", 
+  width = 200, height=75)
+```
+
+In this case, it is likely neither! A more reasonable causal model would look something like: 
+```{r, echo=FALSE}
+DiagrammeR::grViz("digraph {
+  graph [layout = dot, rankdir = TB]
+  
+  node [shape = rectangle] 
+  rec1 [label = 'Height']
+  rec2[label='Weight']
+  rec3[label='Age']
+
+  # edge definitions with the node IDs
+  rec3 -> rec1 rec3 -> rec2 
+
+  }", 
+  width = 200, height=200)
+```
+Both variables are caused by a common (and in this example, ignored) variable. This common cause behind both Height and Weight will cause these two variables to have a strong correlation, despite the fact that no causal relationship actually exists between them. We might think about this as a particular case of omitted variable bias: by not including their common cause we are exaggerating the magnitude of the relationship between Height and Weight.
+
+## Randomized Experimentation
+
+So how do we infer causality? One method is through **random experiments**. Imagine you are a farmer, and you're interested in determining whether a new fertilizer can increase your crop yields. 
+
+To test this, you set up $n$ experimental "plots", small areas of farmland (isolated from each other), which you will use to test your experimental fertilizer. For each of the plots, you flip a coin: if it comes up heads then you fertilize the plot with the new fertilizer, if it's tails you use your old fertilizer. We will refer to plots with the new fertilizer as **treatment** plots, and plots with the older fertilizer as **control** plots. Let's look at the causal diagram for this experiment:
+
+```{r, echo=FALSE}
+DiagrammeR::grViz("digraph {
+  graph [layout = dot, rankdir = LR]
+  
+  node [shape = rectangle] 
+  rec1 [label = 'Coin']
+  rec2[label='Fertilizer']
+  rec3[label='Yield']
+
+  # edge definitions with the node IDs
+  rec1 -> rec2 -> rec3 
+
+  }", 
+  width = 200, height=75)
+```
+
+Now, imagine that you were to regress the crop yield in each plot (denoted $Y_i$) against the outcome of the coin toss ($T_i$), and find a significant, positive relationship:
+$$
+Y_i = \beta_0 + \beta_1 T_i + \epsilon_i
+$$
+(NB: we could also formulate this problem as an ANOVA or t-test and get the same results, but the regression formulation fits better with the rest of the course)
+
+What does this imply about the relationship between the crop yield and the fertilizer treatment? Well, our model is telling us that there exists relationship between the outcome of the coin toss and the crop yield, and the only way the coin toss could have influenced the crops is through the fertilizer. Therefore, we can conclude that the fertilizer must be increasing the crop yield.
+
+This is the basic theory of a **random experiment**. By injecting randomness into some some component of a system, and looking for correlations to that randomness in an outcome variable of interest, we can determine the existence and direction of causal relationships.
+
+Besides enabling causal reasoning, one of the main advantages of the experimental approach is that we don't have to worry about omitted variable bias. Imagine that, due to the large degree of physical separation between our experimental plots, they receive different amounts sunshine. Our causal relationship now looks like:
+
+```{r, echo=FALSE}
+DiagrammeR::grViz("digraph {
+  graph [layout = dot, rankdir =TB]
+  
+  node [shape = rectangle] 
+  rec1 [label = 'Coin']
+  rec2[label='Fertilizer']
+  rec3[label='Yield']
+  rec4[label='Sun']
+
+  # edge definitions with the node IDs
+  rec1 -> rec2 -> rec3 rec4->rec3
+
+  }", 
+  width = 200, height=200)
+```
+
+In this case the "true" model for crop yield is:
+
+$$
+Y_i = \beta_0 + \beta_1 C_i + \gamma S_i
+$$
+
+Even though our final regression omits $S_i$, because $C_i$ and $S_i$ are *independent* we are still able to obtain an unbiased estimate of $\beta_1$ by regressing $Y_i$ on $C_i$. 
+
+For these reasons, experimental data of this form (called Random Controlled Trial, RCTs) is considered the "gold standard" for statistical inference.
+
+## The Rubin Causal Model
+
+Despite the value of experimental data, there are many cases where it's just not available. In these cases we must resort to *causal modeling*. One such technique is the Rubin Causal Model (RCM), which tries to adapt some of the experimental framework to observational data.
+
+The RCM re-formulates the causal problem as a *missing-data problem*. Let's illustrate this using the notation from our fertilizer example, with a small tweak. 
+
+For each plot, we will define two possible outcomes: $Y_i(0)$, what the crop yield *would be* if we set $T_i=0$, and $Y_i(1)$, what the crop yield *would be* if we set $T_i=1$. We then write our actual observation as:
+
+$$
+Y_i = (1-T_i)Y_i(0) + T_iY_i(1)
+$$
+For each individual, we can also define a **treatment effect**:
+$$
+\tau_i = Y_i(1) - Y_i(0)
+$$
+Note that by definition we can only observe either $Y_i(0)$ or $Y_i(1)$, so we're unable to estimate $\tau_i$ directly:
+
+Plot | $Y_i(0)$ | $Y_i(1)$ | $T_i$
+---:|:---:|:---:|:---
+1 | 10 |?| ? | 0
+2 | 12 |?| ? | 0
+3 | 8 |?| ? | 0
+4 | 9 |?| ? | 0
+5 | 10 |?| ? | 0
+6 | ? | 22 | ? | 1
+7 | ? | 19 | ? | 1
+8 | ? | 25 | ? | 1
+9 | ? | 16 | ? | 1
+10 | ? | 19 | ? | 1
+
+In each of these cases, the unobserved outcome is referred to as the **counterfactual**. The datapoint that *would have been the case* under the other treatment. 
+
+What we will instead try and estimate are the *average effects*, how much should we expect the treatment $T_i$, change $Y_i$. In the RCM there are two types of average effects which are of interest:
+
+1. **Average Treatment Effect (ATE)**: This is the average of $\tau_i$ across the whole population: $E[\tau_i]$ (in our example this would be the average change in crop yield taken across all plots anywhere).
+2. **Average Treatment Effect Among the Treated (ATT)**: This is the average of $\tau_i$ across the units (or individuals) who received the treatment: $E_1[\tau_i| T_i=1] = E_1[\tau_i]$ (the average change in crop yield among plots which received the new fertilizer)
+
+If the treatment is truly *randomized*, as in an RCT, then these quantities are equal. This is because $T_i$ is statistically independent from $Y_i(0)$ and $Y_i(1)$, and thus: 
+$$
+\begin{split}
+ATT &= E[\tau_i|T_i=1]\\
+&= E[Y_i(1)-Y_i(0)|T_i=1]\\
+&=  E[Y_i(1)|T_i=1]- E[Y_i(0)|T_i=1]\\
+&=  E[Y_i(1)]- E[Y_i(0)]\\
+&= ATE
+\end{split}
+$$
+In observational data, however, it is rare for $T_i$ to actually be independent from $Y_i(0)$ and $Y_i(1)$, and thus the ATE and ATT will be different. Imagine we are testing the effect of a new type of study session on student test scores. However instead of randomly assigning students to the study session or not, students instead *choose* which treatment they would like (study session or no study session). Say that we observe the following means among the two groups:
+
+| No Study Session | Study Session
+---:|:---:|:---
+E[Y(0)] | 80 | ?
+E[Y(1)] | ? | 90
+
+ We would now like to ask ourselves, what was the effect of the study session on the students who received it? Naively, we might estimate it at $ATE = E[Y(1)]- E[Y(0)] = 90-80=10$. If the students were randomly assigned, then this **naive estimate** would be effective. However, what since the students *self-select* which treatment they receive, its possible (plausible even) that the students who signed up for the study session are simply more motivated and hence tend to achieve higher scores already:
+ 
+ | No Study Session | Study Session
+---:|:---:|:---
+E[Y(0)] | 80 | 89
+E[Y(1)] | 81 | 90
+
+In this case, the actual causal effect of our study session is $ATT = E[Y(1) - Y(0)|T=1] = 90-89 = 1$, far below what we have measured. We can understand this difference as another instance of omitted variable bias. By not accounting for the self-selection of the students, we've overestimated the effect of the study session.
+
+To correct this, we need to understand the **assignment mechanism**. This is perhaps analogous to the **missing data mechanism** which we saw last lecture. The assignment mechanism is defined as:
+
+$$
+T_i \sim P[T_i|X_i]
+$$
+Where here $X_i$ are some individual-level covariates which (partly) determine which treatment is assigned to which unit. In our study session example, $X_i$ might be a student's course average (with the idea that higher motivated students will have a higher course score even before taking the test). The causal diagram for this looks like:
+
+```{r, echo=FALSE}
+DiagrammeR::grViz("digraph {
+  graph [layout = dot, rankdir =TB]
+  
+  node [shape = rectangle] 
+  rec1 [label = 'X']
+  rec2[label='T']
+  rec3[label='Y']
+  rec4[label='Y0']
+  rec5[label='Y1']
+
+  # edge definitions with the node IDs
+  rec1 -> rec2 -> rec3 rec4 -> rec3 rec5 -> rec3 rec1->rec4 rec1->rec5
+
+  }", 
+  width = 200, height=200)
+```
+
+Be careful with the notation here, in the above graph $Y = Y_i = (1-T_i)Y_i(0) + T_iY_i(1)$. Clearly $Y_i$ depends on $T$, however so long as we include $X_i$ in our model then both $Y_i(0)$ and $Y_i(1)$ are independent of $T_i$. 
+
+Since we again have that $E[Y_i(1)|T_i=1,X_i] = E[Y_i(1)|X_i]$, we see that conditioning on $X_i$ re-establishes the equivalence between ATE and ATT:
+
+$$
+\begin{split}
+ATT|X_i &= E[\tau_i|T_i=1,X_i]\\
+&= E[Y_i(1)-Y_i(0)|T_i=1,X_i]\\
+&=  E[Y_i(1)|T_i=1,X_i]- E[Y_i(0)|T_i=1,X_i]\\
+&=  E[Y_i(1)|X_i]- E[Y_i(0)|X_i]\\
+&= ATE|X_i
+\end{split}
+$$
+## Matching Methods
+
+The above means that if we can properly condition on $X_i$, then we can make reasonable estimates about the effect of our study session. In linear regression, we would do so by simply including the missing covariate(s) in our model. 
+
+In the RCM, one way to achieve this is through **matching methods**. The idea with matching methods is to try and estimate $P[T_i|X_i]$, and then *pair* datapoints with similar predicted values of $P[T_i|X_i]$. In doing so, we are effectively *imputing* the missing counterfactual.
+
+<!-- MatchIt example follows:-->
+<!--https://sejdemyr.github.io/r-tutorials/statistics/tutorial8.html#examining-covariate-balance-in-the-matched-sample-->
+
+As with imputation of missing data, it is *possible* to implement matching method by hand, but in practice it's simper to use a package. Here we'll do both to demonstrate the use of **propensity score matching** to determine how attending a catholic school impacts a student's math performance:
+
+```{r}
+library(MatchIt)
+library(magrittr)
+library(tidyverse)
+dat = read.csv('../../data/ecls.csv')
+vars = c('race_white', 'p5hmage', 'w3income', 'p5numpla', 'w3momed_hsb')
+dat %<>% select(c5r2mtsc, catholic, one_of(vars)) %>% drop_na
+
+
+dat %>%
+  group_by(catholic) %>%
+  summarise(n_students = n(),
+            mean_math = mean(c5r2mtsc),
+            std_error = sd(c5r2mtsc) / sqrt(n_students))
+```
+
+Just looking at the standard error we can see that, naively, there is  ~2 point increase in catholic school students' math score.
+
+But students in a catholic school look, on average, very different from students in a non-catholic school:
+```{r}
+dat %>%
+  group_by(catholic) %>%
+  select(one_of(vars)) %>%
+  summarise_all(funs(mean(., na.rm = TRUE)))
+```
+
+Here the variables are defined as:
+
+Var | Def'n
+---:|:---
+`race_white` | A binary variable indiciating whether a student is white
+`p5hmage` | Mother's age
+`w3income`| Self-reported family income
+`p5numpla` | Number of places a student has lived in the past four months
+`w3momed_hsb`| Educational attainment of the mother (1=High school or below, 0=some college or more)
+
+One way to estimate the propensity scores, $P[T_i|X_i]$ is through logistic regression:
+```{r}
+propensity.score.mod = glm(catholic ~ race_white + w3income+ p5hmage + p5numpla + w3momed_hsb, family = binomial, data = dat)
+summary(propensity.score.mod)
+
+
+ps.df = data.frame(pr.score = predict(propensity.score.mod, type = "response"),
+                     catholic = ifelse(propensity.score.mod$model$catholic==1,'Catholic','Public'))
+head(ps.df)
+```
+In order to ensure that we *can* actually match between datapoints, we need to make sure both groups of students have roughly similar distributions of $P[T_i|X_i]$, otherwise we're going to have to throw out a lot of data that can't be matched. Specifically, we need to ensure that the distributions of propensity scores have a similar **support** (range of values with non-zero probability):
+```{r}
+ggplot(ps.df, aes(x = pr.score)) +
+  geom_histogram() +
+  facet_wrap(~catholic) +
+  xlab("Probability of going to Catholic school")
+```
+
+Now, one option here would be to *bin* datapoints by propensity score, and examine the difference in means within bins:
+```{r}
+ps.df$ps.bin = ps.df$pr.score %>% cut(breaks=10)
+ps.df$math = dat$c5r2mtsc
+ps.df %>% head
+
+ps.df %>%
+  group_by(ps.bin,catholic) %>%
+  summarise(n_students = n(),
+            mean_math = mean(math),
+            std_error = sd(math) / sqrt(n_students))
+```
+
+However here is where it gets easier to use a package, specifically `MatchIt`:
+```{r}
+mod.match = matchit(catholic ~ race_white + w3income + p5hmage + p5numpla + w3momed_hsb, method = "nearest", data = dat)
+```
+
+What this does is *pair* each datapoint with another of similar propensity score:
+```{r}
+dat.matched <- match.data(mod.match)
+dim(dat.matched)
+```
+This dataset is far smaller than the original: `MatchIt` has thrown out a large portion of datapoints which cannot be matched (recall from the above histogram that the propensity scores distributions were fairly different, even if their supports were similar). Throwing this data out has, however, equalized the distributions of covariates within each of the two outcome groups:
+```{r}
+dat.matched %>%
+  group_by(catholic) %>%
+  select(one_of(vars)) %>%
+  summarise_all(funs(mean))
+```
+We are now able to perform statistical modeling on the matched data. The matched data lends itself especially well to a paired t-test:
+```{r}
+t.test(c5r2mtsc ~ catholic, data=dat.matched)
+```
+
+However you could also perform linear regression:
+```{r}
+lm(c5r2mtsc ~ catholic, data=dat.matched) %>% summary
+```
+
+Notice that these results are quite similar to what we would have gotten with a multiple regression right off the top!
+```{r}
+lm(c5r2mtsc ~ catholic + race_white + p5hmage + w3income + p5numpla + w3momed_hsb, data=dat.matched) %>% summary
+```
+
+The RCM and propensity score matching is not magic, it won't suddenly take bad data and make it better. What it does do is *isolate* out selection effects due to covariates, and analyze the data accordingly. Importantly: method of estimating propensity scores can be *highly* nonlinear, unlike multiple regression where the effect of confounders must be linear. This may be desirable, depending on your context. 

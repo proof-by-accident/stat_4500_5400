@@ -1,0 +1,50 @@
+---
+title: "Final Review"
+author: "Peter Shaffery"
+date: "4/29/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+## Linear Regression
+  a. How do you derive the linear regression estimators? (RABE 2.5, Lecture 2)
+  b. What theoretical properties do these estimators have? (RABE 3.7Lecture 5)
+  c. What are the important assumptions of a linear regression model? Are any assumptions more important than others? (RABE Ch 2, Lecture 2)
+  d. How do you verify that these assumptions are met? (RABE 4.6-8, Lecture 3+6)
+  e. What do you do if the assumptions aren't met? (RABE Ch 6 and 7 Lecture 10)
+  f. What are the various hypothesis tests that you see associated with linear regression? How are they interpreted? (RABE 2.6 and 3.9, Lecture 2-4)
+  g. How do you choose model variables? (RABE Ch 11, Lecture 8+9)
+  
+## Generalized Linear Models
+  a. What is the exponential family of distributions? Why does it matter to GLMs? (IGLM 3.2+3.3, Lecture 12)
+  b. What defines a generalized linear models? What makes on GLM different from another? (IGLM 3.4, Lecture 12)
+  c. How do you estimate GLM coefficients? What are the properties of this estimator (mean, variance, etc.)? (IGLM 4.3 + Ch 5, Lectures 12+13)
+  e. What hypothesis tests are available for a GLM? What do they test? (IGLM 5.4-5.7 Lecture 15)
+  f. How to assess model performance? What diagnostics should you perform? (IGLM 7.5-7.7, Lecture 16)
+  g. What problems might occur (if any) that are unique to GLMs? How can you address them? (IGLM 7.7+9.8, Lectures 16+17)
+  h. How do you interpret logistic regression? What other link functions exist for binomial regression? (IGLM Ch 6, Lecture 14)
+  i. How do you interpret a Poisson regression? What variants of Poisson exist? (IGLM Ch 9, Lecture 17)
+  
+## Hiearchical Models
+  a. Why would you opt for a partially pooled model over a pooled or unpooled model? (Lecture 19)
+  b. What distinguishes a hierarchical model from multiple regression? (lecture 20)
+  c. How do you interpret random effects? (Lecture 19+20)
+  
+## Bayesian Regression
+  a. What is "Bayesian probability"? (Lecture 21)
+  b. What is the Bayesian equivalent of "maximum likelihood"? (Lecture 22)
+  c. What is the role of the prior in Bayesian analysis? What makes a good prior? (Lectures 21+22)
+  d. How do you perform Bayesian model selection? (Lecture 25)
+  e. How do you diagnose a Bayesian model? (Lecture 24)
+  f. How do you generate predictions from a Bayesian model? (Lecture 24+25)
+  g. What is the role of a sampling algorithm? (Lecture 25)
+  
+## Miscellaneous
+  a. What is a scatterplot smoother? What algorithms exist to smooth scatterplots, and how do you interpret their tuning parameters? (GAM, Lecture 18)
+  b. How do we categorize missing data? (Lecture 26)
+  c. What can we do to resolve issues with missing data? (Lecture 26)
+  d. What is omitted variable bias? How does it impact our ability to draw causal conclusions? (Lecture 27)
+  e. Why do random experiments "work"? (Lecture 27)
