@@ -1,0 +1,195 @@
+---
+title: "Homework 3"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+# Problem 1- Insurance Claims! (IGLM 9.2)
+
+The attached `insurance.csv` dataset contains information on the numbers of automobile insurance policies (`n`) and the number of claims (`y`), tabulated by the car's insurance category (`car`), the age category of the policy-holder (`age`), and the region where the policy-holder lives (`dist`, equal to 1 if the policy-holder lives in a major city, and 0 elsewhere). This data is derived from another dataset in Aitkin et. al. (1989).
+
+a. Use *Poisson regression* to fit a model relating the number of claims `y`, against all tabulating variables (`car`, `age`, and `dist`), as well as all interaction terms between the categorical variables. Be aware that by default `R` will read the category labels as numbers! Use eg. `as.factor` to convert them to categorical.
+
+```{r}
+library(tidyverse)
+library(magrittr)
+dat = read.csv('../../data/insurance.csv')
+
+# largest possible interaction model:
+mod1 = glm( y~ n + as.factor(car)*as.factor(age)*as.factor(dist), data=dat, family=poisson)
+mod1 %>% summary
+```
+
+b. Based on the modeling in (a) above, Aitkin et. al. determined that all the interaction terms were insignificant, and that both `car` and `age` could be treated as continuous variables rather than categories. Fit this new model, and  compare to the model in (a) above. What conclusions do you reach
+
+```{r}
+mod2 = glm( y~ n + car + age + as.factor(dist), data=dat, family=poisson)
+mod2 %>% summary
+```
+Compare between $M_1$ and $M_2$ using a deviance hypothesis test. Be careful here because $M_2$ is actually our "null model" in this case, despite the fact that we usually use $M_1$ to denote the null model:
+
+```{r}
+D1 = 0 
+df1 = 0
+D2 = 501.79
+df2 = 27
+
+delta.D = D2 - D1
+df = df2-df1
+
+p.val = pchisq(delta.D,df,lower.tail=FALSE)
+p.val
+```
+Since the p-value is less than any reasonable choice of $\alpha$, we *reject* $M_2$ (the null model) in favor of $M_1$. Aitkin et. al. appear to have been mislead by the Wald test p-values: the interaction terms **do** matter in aggregate, even if all together no single one matters.
+
+Note that here we could have also used the model AICs: the original (interaction) model has an AIC of ~232, far smaller than the reduced model's AIC of ~680. This indicates that $M_1$ substantially outperforms $M_2$ in terms of predictive power, even accounting for the large difference in model sizes.
+
+# Problem 2- Rats!
+
+The attached `rats.csv` contains birthweights for 30 baby rats (in grams), measured every week for 5 weeks. For this problem we'll denote by $Y_{jk}$ the weight of the j-th rat at age $x_{jk}$ (in days) where $j=1,...,30$ and $k=1,..,5$
+
+a. Conduct an exploratory analysis of the data. Provide plots of rat-specific growth trajectories (piecewise-linear connections between observations for each rat, in a single figure). If you're using R this will probably be easiest in `ggplot2`, while if you're using Python you may want to checkout `plotnine` or `altair`.
+
+```{r}
+dat = read.csv('../../data/rats.csv')
+
+ggplot(dat,aes(x=age,y=weight,color=as.factor(rat))) + geom_line() + labs(x='Age',y='Weight',color='Rat')
+```
+From this plot we see that while the *initial weight* appears to vary by rat, the actual growth rates in a given week do not appear to differ much. We should not expect a varying slope model to show a lot of differentiation across individuals.
+
+b. Fit the linear model $E[Y_{jk}] = \alpha + \beta x_{jk}$, assuming the variables $Y_{jk}$ are all independent (ie. ignoring the fact that measurements corresponding to the same rat will have some correlation). Provide a summary of this model, check all diagnostics, and discuss the adequacy of the linear regression assumptions.
+
+```{r}
+mod.lm = lm(weight~age,data=dat)
+summary(mod.lm)
+plot(mod.lm)
+```
+Linearity is not very well satisified. Looking at the plot of the data this isn't surprising, we see a pretty clear "taper" in the growth rate in the last week or so. Heteroskedasticity also seems to be occurring here- could be caused by the non-linearity.
+
+c. Fit the linear model $E[Y_{jk}] = \alpha_j + \beta_j x_{jk}$ (note that here the intercept and slope vary across individuals $j$). Provide a summary of this model, check all diagnostics, and discuss the adequacy of the linear regression assumptions.
+
+```{r}
+mod.lm.interaction = lm(weight~age*as.factor(rat),data=dat)
+summary(mod.lm.interaction)
+plot(mod.lm.interaction)
+```
+Linearity definitely not satisfied, and there appear to be some high-influence datapoints. Nevertheless, adjusted $R^2$ is higher than for the non-interaction model (maybe due to high influence points), but clearly some evidence that there are differences across individual rats.
+
+d. Fit the hierarchical model $E[Y_{jk}] = \alpha_j + \beta_j x_{jk}$ where $\alpha_j \sim N(\mu_{\alpha},\sigma^2_{\alpha})$ and $\beta_j \sim N(\mu_{\beta},\sigma^2_{\beta})$. Provide a summary table.
+
+```{r}
+library(lme4)
+mod.lmer = lmer(weight~(age|rat),data=dat)
+summary(mod.lmer)
+hist(ranef(mod.lmer)$rat[,1])
+hist(ranef(mod.lmer)$rat[,2])
+plot(mod.lmer)
+```
+Again we see that linearity is not well satisified, so a transformation of the data may be needed. As expected, there is far more variability in the rat intercepts than in the slopes. As a percentage of the mean, the standard deviation in the random intercepts is almost twice as high as the standard deviation in the slopes.
+
+e. For at least two rats, plot the observed the data, as well as the predictions obtained from the hierarchical model in (d) and those from the two linear models fit in (b) and (c). Using these plots discuss which model you would prefer the most.
+
+```{r}
+new.dat = data.frame('rat'=rep(1:2,each=5),
+                     'age'=rep(unique(dat$age),2),
+                     'weight'=dat %>%
+                       filter(rat%in%c(1,2)) %>%
+                       arrange(rat) %>%
+                       dplyr::select(weight)
+                     )
+
+pred.lm = new.dat
+pred.lm$pred = predict(mod.lm,newdata=new.dat)
+pred.lm$model = 'Linear Model'
+
+pred.lm.interaction = new.dat
+pred.lm.interaction$pred = predict(mod.lm.interaction,newdata=new.dat)
+pred.lm.interaction$model = 'Linear Model w/ Interaction'
+
+pred.lmer = new.dat
+pred.lmer$pred = predict(mod.lmer,newdata=new.dat)
+pred.lmer$model = 'Hiearchical Model'
+
+plt.df = rbind(pred.lm,pred.lm.interaction,pred.lmer)
+
+ggplot(plt.df,aes(x=age)) + 
+         geom_point(aes(y=weight)) +
+         geom_line(aes(y=pred,color=model)) +
+         facet_wrap(~rat) +
+         labs(x='Age',y='Weight',color='Model')
+```
+For both rats we see that all three models make *fairly* similar predictions. The linear model does appear to fit somewhat worse for rat 2 than either the hierarchical or interaction models, and this does fit with what we were seeing above. Here we shouldn't expect the hierarchical model to substantially outperform the interaction model, as all the rats have the same number of datapoints, so not much advantage to partial pooling, and moreover there isn't even much variability in the slopes.
+
+# Problem 3- Students!
+
+In this problem we will work through some fundamental concepts in Bayesian analysis. This problem largely follows Richard McElreath's "Statistical Rethinking", section 4.7.
+
+a. A class of $n$ students is measured for height (in cm) each year for $k$ years. Write down both a likelihood and a prior for a Bayesian simple linear regression of student height (as dependent variable) against year of measurement (as independent variable).  Give a short interpretation of all components of the model (including likelihood and prior), and justify your choice of prior.
+
+At a first pass our model might look something like:
+$$
+\begin{split}
+\beta_0,\beta_1,\sigma^2 &\sim \frac{1}{\sigma^2} \times \mathbb{1}_{\sigma>0}\\
+\text{HEIGHT} &\sim N(\beta_0 + \beta_1 \text{YEAR}, \sigma^2)\\
+\end{split}
+$$
+I started by choosing a maximally uninformative prior: uniform on the coefficients $\beta_0$ and $\beta_1$ and over $\log \sigma^2$ (which is equivalent to proportional to $\frac{1}{\sigma^2})$. This is probably not a great prior for this problem, since we know for example that it is likely $\beta_1>0$ since teenagers don't (usually) shrink with age. Nevertheless, in order to have something to talk about later we'll start from a bad prior.
+
+The likelihood of this model has the usual interpretation as giving the distribution of HEIGHT in terms of YEAR of measurement. For every additional YEAR we expect the average HEIGHT to change by $\beta_1$, where the average heights of students at the beginning of the study (YEAR=0) given by $\beta_0$. $\sigma^2$ gives the (constant) variance of student heights in a given year.
+
+b. Now, pretend you are told (before collecting any data) that each student eats a diet plentiful in spinach, and thus it is guaranteed that each will get taller every year. Does this information change any of your priors, and if so how?
+
+Yes, as mention above this implies that $\beta_1>0$, so I would adjust my priors to:
+$$
+\beta_0,\beta_1,\sigma^2 \sim \frac{1}{\sigma^2} \times \mathbb{1}_{\sigma>0,\beta_1>0}
+$$
+Ie. assign no prior probability mass to values of $\beta_1<0$. Notice that this will **guarantee** that my posterior will *also* not assign and probability mass to $\beta_1<0$, so this is a highly informative change (no amount of data will make me change this belief).
+
+c. In addition to the information in (b) above (and before collecting any data) you learn that at outset of the study the average height of students is 120cm. Does this change any of your priors, and if so how?
+
+Since $\beta_0$ is exactly equal to the average height at the start of the study, this implies that $\beta_0=120$ for sure. Therefore we no longer need to perform inference over this parameter: we know its value exactly and thus can just drop it from our prior. The model now becomes:
+$$
+\begin{split}
+\beta_1,\sigma^2 &\sim \frac{1}{\sigma^2} \times \mathbb{1}_{\sigma^2>0,\beta_1>0}\\
+\text{HEIGHT} &\sim N(120 + \beta_1 \text{YEAR}, \sigma^2)\\
+\end{split}
+$$
+
+d. In addition to (b) and (c) above (and still before collecting any data) you learn that the variance of heights among students in the same year cannot be more than $64 \text{cm}$. Does this information change any of your priors, and if so how?
+
+As with learning that $\beta_1>0$, this information causes us to adjust our priors **support** (the parameter values for which the prior probability density is nonzero). Our final priors are:
+
+$$
+\beta_1,\sigma^2 \sim \frac{1}{\sigma^2} \times \mathbb{1}_{0<\sigma<64,\beta_1>0}
+$$
+
+e. Finally, using the priors you selected at the end of (d) above, describe the prior distribution of the students' heights at the end of the first year of the study. With the aid of a software tool such as R or Python (or a physical tool   such as a coin, a bag of dice, or a FERMIAC), draw 100 samples from this prior distribution and plot them in a histogram. Does this prior distribution accurately reflect your beliefs about the students' heights at the end of the first year? Does it accurately reflect what is physiologically possible? If not, what would you change in your priors to resolve the discrepancy?
+
+We are being asked to draw samples of HEIGHT from the model:
+$$
+\begin{split}
+\beta_1,\sigma^2 &\sim \frac{1}{\sigma^2} \times \mathbb{1}_{0<\sigma^2<64,\beta_1>0}\\
+\text{HEIGHT} &\sim N(120 + \beta_1 \times 1, \sigma^2)\\
+\end{split}
+$$
+To make things a little easier on myself, I will assume that it is impossible for a student to grow more than 1 meters in a single measurement period (since this would imply the existence of ~15 foot tall students at the end of the experiment):
+$$
+\begin{split}
+\beta_1,\sigma^2 &\sim \frac{1}{\sigma^2} \times \mathbb{1}_{0<\sigma^2<64,0<\beta_1<100}\\
+\text{HEIGHT} &\sim N(120 + \beta_1 \times 1, \sigma^2)\\
+\end{split}
+$$
+Moreover, I will exploit the fact that $\sigma^2 \sim \frac{1}{\sigma^2}$ is equivalent to a uniform distribution over $\log \sigma^2$:
+```{r}
+n = 100
+sigma2.samps = exp(runif(n,-1e6,log(64)))
+beta1.samps = runif(n,0,100)
+height.samps = rnorm(n,120+beta1.samps,sigma2.samps)
+
+hist(height.samps)
+```
+
+This seems like a fairly reasonable predictive prior distribution. Although it *does* seem to allow for students to be a *little* too tall at the end of a month (notice that the range goes as high as 250cm, which is like 6'6"), the majority of the mass lies around plausible human heights. This seems like a reasonably informative set of priors, with enough uncertainty to allow us to be "surprised" by our data. 

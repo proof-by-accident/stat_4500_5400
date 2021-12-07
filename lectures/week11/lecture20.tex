@@ -1,0 +1,521 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={Lecture 20- Partial Pooling},
+  pdfauthor={Peter Shaffery},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\title{Lecture 20- Partial Pooling}
+\author{Peter Shaffery}
+\date{3/30/2021}
+
+\begin{document}
+\maketitle
+
+\hypertarget{example---radon}{%
+\section{Example - Radon}\label{example---radon}}
+
+Let's say that you would like to buy a house in Minnesota. A big concern
+when buying a new house is checking its radon levels. Radon is a
+colorless, odorless gas produced as part of the radioactive decay
+process of Uranium. Prolonged exposure to radon can have serious (and
+negative) health consequences, so it's important to buy a house without
+radon!
+
+Fortunately you've got a dataset containing household level radon
+measurements all over Minnesota. Included in this dataset is the
+household's county, the floor on which the measurement was made on, as
+well as some other potentially useful variable. You'd like to use this
+information to find a house with low radon levels.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(tidyverse)}
+\FunctionTok{library}\NormalTok{(magrittr)}
+\FunctionTok{library}\NormalTok{(lme4)}
+
+\NormalTok{radon }\OtherTok{=} \FunctionTok{read.csv}\NormalTok{(}\StringTok{\textquotesingle{}../../data/radon\_mn.csv\textquotesingle{}}\NormalTok{)}
+\NormalTok{radon}\SpecialCharTok{$}\NormalTok{log\_radon }\OtherTok{=} \FunctionTok{log}\NormalTok{(radon}\SpecialCharTok{$}\NormalTok{activity}\FloatTok{+.001}\NormalTok{)}
+
+\NormalTok{radon }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ head}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##   idnum state state2 stfips   zip region typebldg floor room basement windoor
+## 1  5081    MN     MN     27 55735      5        1     1    3        N      NA
+## 2  5082    MN     MN     27 55748      5        1     0    4        Y      NA
+## 3  5083    MN     MN     27 55748      5        1     0    4        Y      NA
+## 4  5084    MN     MN     27 56469      5        1     0    4        Y      NA
+## 5  5085    MN     MN     27 55011      3        1     0    4        Y      NA
+## 6  5086    MN     MN     27 55014      3        1     0    4        Y      NA
+##   rep stratum wave starttm stoptm startdt stopdt activity pcterr     adjwt
+## 1   2       4   41     930    930   12088  12288      2.2    9.7 1146.4992
+## 2   5       2   40    1615   1615   11888  12088      2.2   14.5  471.3662
+## 3   3       2   42    1030   1515   20288  21188      2.9    9.6  433.3167
+## 4   2       2   24    1410   1410  122987 123187      1.0   24.3  461.6237
+## 5   3       2   40     600    600   12888  13088      3.1   13.8  433.3167
+## 6   5       2   22     900   1300  120287 121187      2.5   12.8  471.3662
+##   dupflag zipflag cntyfips county    log_radon
+## 1       1       0        1 AITKIN 0.7889118025
+## 2       0       0        1 AITKIN 0.7889118025
+## 3       0       0        1 AITKIN 1.0650555051
+## 4       0       0        1 AITKIN 0.0009995003
+## 5       0       0        3  ANOKA 1.1317246401
+## 6       0       0        3  ANOKA 0.9166906519
+\end{verbatim}
+
+Recall from last lecture, our \emph{varying-intercepts, partial-pooling}
+model:
+
+\[
+\begin{split}
+y_i &= \alpha_{j[i]} + \beta_1 x_i + \epsilon_i\\
+\alpha_j& = \mu_{\alpha} + \eta_j\\
+\end{split}
+\] By relating the \(\alpha_j\) to each other through the model
+\(\alpha_j \sim N(\mu_{\alpha},\sigma^2_{\alpha})\) we allow the
+different counties to \emph{share} information with each other, while
+also allowing for different counties to have different baseline
+log-radon.
+
+Let's fit that model
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{partial }\OtherTok{=} \FunctionTok{lmer}\NormalTok{(log\_radon }\SpecialCharTok{\textasciitilde{}}\NormalTok{ floor }\SpecialCharTok{+}\NormalTok{ (}\DecValTok{1}\SpecialCharTok{|}\NormalTok{county), }\AttributeTok{data=}\NormalTok{radon)}
+\end{Highlighting}
+\end{Shaded}
+
+Now, let's say that in addition to our dataset containing
+household-level radon measurements we \emph{also} have a dataset
+containing county-level data
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{county }\OtherTok{=} \FunctionTok{read.csv}\NormalTok{(}\StringTok{\textquotesingle{}../../data/county\_radon.csv\textquotesingle{}}\NormalTok{)}
+\NormalTok{county }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ head}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##   stfips ctfips st     cty     lon    lat    Uppm
+## 1      1      1 AL AUTAUGA -86.643 32.534 1.78331
+## 2      1      3 AL BALDWIN -87.750 30.661 1.38323
+## 3      1      5 AL BARBOUR -85.393 31.870 2.10105
+## 4      1      7 AL    BIBB -87.126 32.998 1.67313
+## 5      1      9 AL  BLOUNT -86.568 33.981 1.88501
+## 6      1     11 AL BULLOCK -85.716 32.100 2.46112
+\end{verbatim}
+
+We see that, among other things, this dataset contains a measure of the
+county's level of Uraniam (the column \texttt{Uppm}). Since radon is a
+product of uranium decay, we would expect a county's overall uranium
+levels to be predictive of its radon baseline. Let's combine this county
+data with our estimates \(\hat \alpha_j\)
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{plt.df }\OtherTok{=} \FunctionTok{ranef}\NormalTok{(partial)}\SpecialCharTok{$}\NormalTok{county}
+\NormalTok{plt.df}\SpecialCharTok{$}\NormalTok{county }\OtherTok{=}\NormalTok{ plt.df }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ rownames}
+\FunctionTok{names}\NormalTok{(plt.df)}\OtherTok{=}\FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}coef\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}cty\textquotesingle{}}\NormalTok{)}
+
+\NormalTok{plt.df }\SpecialCharTok{\%\textless{}\textgreater{}\%} \FunctionTok{left\_join}\NormalTok{(county }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{filter}\NormalTok{(st}\SpecialCharTok{==}\StringTok{\textquotesingle{}MN\textquotesingle{}}\NormalTok{),}\AttributeTok{by=}\FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}cty\textquotesingle{}}\NormalTok{)) }
+
+\FunctionTok{ggplot}\NormalTok{(plt.df, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{Uppm,}\AttributeTok{y=}\NormalTok{coef)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{()}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture20_files/figure-latex/unnamed-chunk-4-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{lm}\NormalTok{(coef }\SpecialCharTok{\textasciitilde{}}\NormalTok{ Uppm, }\AttributeTok{data=}\NormalTok{plt.df) }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ summary}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+## lm(formula = coef ~ Uppm, data = plt.df)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -0.5772 -0.1066  0.0089  0.1315  0.3559 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) -0.35164    0.06785  -5.182 1.46e-06 ***
+## Uppm         0.32442    0.05948   5.454 4.75e-07 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.1942 on 85 degrees of freedom
+## Multiple R-squared:  0.2593, Adjusted R-squared:  0.2506 
+## F-statistic: 29.75 on 1 and 85 DF,  p-value: 4.747e-07
+\end{verbatim}
+
+Clearly county UPPM predicts \(\alpha_j\), the county's baseline radon
+levels. Can we account for this relationship in our model? Yes!
+
+\[
+\begin{split}
+\text{LOG_RADON}_i &= \beta_0 + \beta_1 \text{FLOOR}_i + \sum_j \beta_{j[i]} \text{COUNTY}_{j[i]} + \epsilon_i\\
+\beta_j &=  \gamma_0 + \gamma_1 \text{UPPM}_j + \eta_j
+\end{split}
+\]
+
+Where \(\eta_j \sim N(0, \sigma^2_{\beta})\)
+
+Fundamentally, this is not different than our partial pooling model
+\(\alpha_j \sim N(\mu_{\alpha},\sigma^2_{\alpha})\). In both cases, we
+are simply specifying a linear model for the \(\beta_j\), the only
+difference is in the mean of that model: \(\mu_{\beta}\) vs
+\(\gamma_0 + \gamma_1 \text{UPPM}_j + \eta_j\).
+
+How can we interpret this model? One obvious way we have already seen,
+it simply relates the baseline log-radon to county-level features. But
+how is that different than just including UPPM as an independent
+variable in our log-radon regression?
+
+Well, observe that we can plug the ``upper'' level of the model directly
+into the ``lower'' level: \[
+\begin{split}
+\text{LOG_RADON}_i &= \beta_0 + \beta_1 \text{FLOOR}_i + \sum_j (\gamma_0 + \gamma_1 \text{UPPM}_{j[i]} + \eta_{j[i]}) \text{ COUNTY}_{j[i]}  + \epsilon_i\\
+&= \beta_0' + \beta_1 \text{FLOOR}_i + \sum_j (\gamma_0 + \gamma_1 \text{UPPM}_{j[i]} + \eta_{j[i]}) \text{ COUNTY}_{j[i]}  + \epsilon_i\\
+\end{split}
+\]
+
+Now, because \(\text{ COUNTY}_{j[i]}\) is an indicator variable, only
+one term in that sum will end up in the final regression for any given
+\(i\), hence we can just write this as: \[
+y_i = \beta_0 + \beta_1 \text{FLOOR}_i + \gamma_0 + \gamma_1 \text{UPPM}_{j[i]} + \eta_{j[i]} + \epsilon_i
+\]
+
+Combining up like terms: \[
+\begin{split}
+y_i &= (\beta_0 + \gamma_0) + \beta_1 \text{FLOOR}_i + \gamma_1 \text{UPPM}_{j[i]} + (\eta_{j[i]} + \epsilon_i)\\
+&= \beta_0' + \beta_1 \text{FLOOR}_i + \beta_2 \text{UPPM}_i + \epsilon_i'\\
+\end{split}
+\] Now, this \emph{looks} like the model that just plugs UPPM directly
+into the regression, but pay close attention to the error terms: \[
+\epsilon_i' = \eta_{j[i]} + \epsilon_i
+\] These error terms are not independent! Two error terms from the same
+county \(j\) will share a \(\eta_{j}\) factor. From this we can show a
+few interesting facts. First off,
+\(\text{Var}[\epsilon_i] = \sigma^2_y + \sigma^2_{\beta}\). Second, we
+have that if \(i\) and \(k\) are the indices of two measurements from
+the same county (ie. \(j[i]=j[k]\)) then
+\(\text{Cov}[\epsilon_i,\epsilon_k] = \sigma^2_{\beta}\). Finally, only
+if \(i\) and \(k\) correspond to measurements from \emph{different}
+counties is \(\text{Cov}[\epsilon_i,\epsilon_k] =0\).
+
+Finally, finally, observe that there is one more way that we could write
+this (same) model: \[
+\begin{split}
+\text{LOG_RADON}_i &= \alpha_{j[i]} + \beta_1 \text{FLOOR}_i + \beta_2 \text{UPPM}_{j[i]} + \epsilon_i\\
+\alpha_{j[i]} &=  \gamma_0 + \eta_j
+\end{split}
+\] And observe that we could combine these two levels of the model
+together and obtain the same result as if we included UPPM in the
+``upper'' level of the model instead. This final form is how
+\texttt{lmer} prefers county-level data to be incorporated:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{dat }\OtherTok{=}\NormalTok{ radon }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{left\_join}\NormalTok{(county,}\AttributeTok{by=}\FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}county\textquotesingle{}}\OtherTok{=}\StringTok{\textquotesingle{}cty\textquotesingle{}}\NormalTok{))}
+\NormalTok{mod }\OtherTok{=} \FunctionTok{lmer}\NormalTok{(log\_radon }\SpecialCharTok{\textasciitilde{}}\NormalTok{ floor }\SpecialCharTok{+}\NormalTok{ Uppm }\SpecialCharTok{+}\NormalTok{ (}\DecValTok{1}\SpecialCharTok{|}\NormalTok{county), }\AttributeTok{data=}\NormalTok{dat)}
+\FunctionTok{summary}\NormalTok{(mod)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Linear mixed model fit by REML ['lmerMod']
+## Formula: log_radon ~ floor + Uppm + (1 | county)
+##    Data: dat
+## 
+## REML criterion at convergence: 8134.2
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -9.2876 -0.6682  0.0262  0.6319  4.0129 
+## 
+## Random effects:
+##  Groups   Name        Variance Std.Dev.
+##  county   (Intercept) 0.1693   0.4115  
+##  Residual             0.5815   0.7626  
+## Number of obs: 3480, groups:  county, 85
+## 
+## Fixed effects:
+##             Estimate Std. Error t value
+## (Intercept)  1.48645    0.06529  22.767
+## floor       -0.93998    0.03941 -23.853
+## Uppm         0.02440    0.02864   0.852
+## 
+## Correlation of Fixed Effects:
+##       (Intr) floor 
+## floor -0.128       
+## Uppm  -0.562  0.002
+\end{verbatim}
+
+\hypertarget{when-is-hierarchical-modelingpartial-pooling-effective}{%
+\section{When is Hierarchical Modeling/Partial Pooling
+Effective?}\label{when-is-hierarchical-modelingpartial-pooling-effective}}
+
+Typically hierarchical modeling is effective when pooling and
+non-pooling are \emph{uneffective}. This sounds a little circular, but
+it's the simplest heuristic. If \(\sigma^2_{\beta}\) is small relative
+to \(\sigma^2_y\) then there isn't going to be much improvement over the
+pooled model. Conversely if \(\sigma_{\beta}^2\) is much larger than
+\(\sigma_y\) then the unpooled model will win out.
+
+This leads us to the \emph{intraclass correlation}:
+\(\rho = \frac{\sigma_{\beta}^2}{(\sigma_{\beta}^2 + \sigma_y^2)}\).
+When \(\rho\) is close to 0 then the grouping contains almost no
+information, and the hierarchical structure isn't adding much to the
+model. On the other hand, when \(\rho\) is close to 1 then within a
+grouping the \(y_i\) will be very similar (setting aside differences due
+to the independent variables), and so an unpooled model may be more
+appropriate.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(partial)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Linear mixed model fit by REML ['lmerMod']
+## Formula: log_radon ~ floor + (1 | county)
+##    Data: radon
+## 
+## REML criterion at convergence: 2295.4
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -8.4712 -0.5262  0.0333  0.5716  3.3349 
+## 
+## Random effects:
+##  Groups   Name        Variance Std.Dev.
+##  county   (Intercept) 0.1077   0.3281  
+##  Residual             0.7422   0.8615  
+## Number of obs: 878, groups:  county, 85
+## 
+## Fixed effects:
+##             Estimate Std. Error t value
+## (Intercept)  1.44336    0.05527   26.12
+## floor       -0.76191    0.08255   -9.23
+## 
+## Correlation of Fixed Effects:
+##       (Intr)
+## floor -0.305
+\end{verbatim}
+
+From the above we have that \(\hat \sigma_y^2 = .074\) and
+\(\hat \sigma_{\beta}^2=.11\), giving as an intraclass correlation of
+\(\rho \approx .6\). This is indicative of both county-, and
+individual-level variation being present in the model, and helps explain
+why the partial pooling (ie. hiearchical) model is an effective choice.
+
+\hypertarget{can-i-hypothesis-test-the-hierarchical-structure}{%
+\subsection{Can I Hypothesis Test the Hierarchical
+Structure?}\label{can-i-hypothesis-test-the-hierarchical-structure}}
+
+Not really. Much like how it can be difficult to interpret the p-values
+of a one-hot encoded categorical variable with a large number of levels,
+p-values in the context of a hierachical model are challenging to make
+sense of. If only a small number of county-levels produce
+``significantly'' non-zero \(\hat \alpha_j\), does that mean that the
+county variable is an appropriate grouping-variable? It's difficult to
+say.
+
+Moreover, significance testing kind of misses the point. Typically in a
+hierarchical modeling scenario, we don't really care whether St.~Louis
+has significantly different log-radon levels than Lac Qui Parle. We're
+using the model hierarchy to allow our model to control for
+county-county variability (or intra-group correlation) in a principled
+way.
+
+\hypertarget{what-can-i-use-instead}{%
+\subsection{What Can I Use Instead?}\label{what-can-i-use-instead}}
+
+We \emph{do} still have ANOVA for models containing only categorical
+variables, deviance to compare nested models, and AIC for pretty much
+any case. All of these become more complex due to the hiearchical
+structure, however.
+
+For one, it's challenging to characterize the ``number of parameters'',
+since we've allowed some parameters to be random. Instead define an
+``effective number of parameters'' (or ``effective degrees of
+freedom''), which is an estimate of how much pooling the model performs.
+
+Typically it's easiest to have these quantities computed using a package
+or just the \texttt{AIC} function from \texttt{stats}:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{pool }\OtherTok{=} \FunctionTok{lm}\NormalTok{(log\_radon}\SpecialCharTok{\textasciitilde{}}\NormalTok{floor, }\AttributeTok{data=}\NormalTok{radon)}
+\NormalTok{unpool }\OtherTok{=} \FunctionTok{lm}\NormalTok{(log\_radon}\SpecialCharTok{\textasciitilde{}}\NormalTok{floor}\SpecialCharTok{+}\NormalTok{county, }\AttributeTok{data=}\NormalTok{radon)}
+\NormalTok{interact }\OtherTok{=} \FunctionTok{lm}\NormalTok{(log\_radon}\SpecialCharTok{\textasciitilde{}}\NormalTok{floor}\SpecialCharTok{*}\NormalTok{county, }\AttributeTok{data=}\NormalTok{radon)}
+\NormalTok{re }\OtherTok{=} \FunctionTok{lmer}\NormalTok{(log\_radon}\SpecialCharTok{\textasciitilde{}}\NormalTok{floor }\SpecialCharTok{+}\NormalTok{ (}\DecValTok{1}\SpecialCharTok{|}\NormalTok{county), }\AttributeTok{data=}\NormalTok{radon)}
+
+\FunctionTok{AIC}\NormalTok{(pool,unpool,interact,re) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{arrange}\NormalTok{(AIC)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##           df      AIC
+## re         4 2303.399
+## unpool    87 2316.784
+## interact 145 2340.451
+## pool       3 2348.828
+\end{verbatim}
+
+\hypertarget{hiearchical-generalized-linear-models}{%
+\section{Hiearchical, Generalized, Linear
+Models}\label{hiearchical-generalized-linear-models}}
+
+We can pretty straightforwardly extend the hiearchical modeling approach
+to the world of GLMs. Say that instead of working with log-radon, we
+converted the radon activity measurement to a ``counts'' scale and used
+a poisson regression instead:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{radon}\SpecialCharTok{$}\NormalTok{activity\_count }\OtherTok{=} \DecValTok{10}\SpecialCharTok{*}\NormalTok{radon}\SpecialCharTok{$}\NormalTok{activity}
+\NormalTok{mod }\OtherTok{=} \FunctionTok{glmer}\NormalTok{(activity\_count }\SpecialCharTok{\textasciitilde{}}\NormalTok{ floor }\SpecialCharTok{+}\NormalTok{ (}\DecValTok{1}\SpecialCharTok{|}\NormalTok{county), }\AttributeTok{data=}\NormalTok{radon, }\AttributeTok{family=}\NormalTok{poisson)}
+\FunctionTok{summary}\NormalTok{(mod)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Generalized linear mixed model fit by maximum likelihood (Laplace
+##   Approximation) [glmerMod]
+##  Family: poisson  ( log )
+## Formula: activity_count ~ floor + (1 | county)
+##    Data: radon
+## 
+##      AIC      BIC   logLik deviance df.resid 
+##  24326.1  24340.5 -12160.1  24320.1      875 
+## 
+## Scaled residuals: 
+##    Min     1Q Median     3Q    Max 
+## -8.977 -3.176 -1.020  1.778 50.810 
+## 
+## Random effects:
+##  Groups Name        Variance Std.Dev.
+##  county (Intercept) 0.2079   0.456   
+## Number of obs: 878, groups:  county, 85
+## 
+## Fixed effects:
+##             Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)  3.97675    0.05014   79.31   <2e-16 ***
+## floor       -0.58897    0.01687  -34.91   <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Correlation of Fixed Effects:
+##       (Intr)
+## floor -0.050
+\end{verbatim}
+
+\end{document}

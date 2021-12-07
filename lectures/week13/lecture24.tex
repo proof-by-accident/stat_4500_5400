@@ -1,0 +1,935 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={Lecture 24},
+  pdfauthor={Peter Shaffery},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\title{Lecture 24}
+\author{Peter Shaffery}
+\date{4/15/2021}
+
+\begin{document}
+\maketitle
+
+\hypertarget{bayesian-regression}{%
+\section{Bayesian Regression}\label{bayesian-regression}}
+
+Say that we have \(n\) observations \((y_i,\vec x_i)\), and we would
+like to perform Bayesian regression using the linear model:
+
+\[
+y_i \sim N( \vec x_i^T \vec \beta, \sigma^2)
+\] A common choice of prior here is the improper prior:
+
+\[
+P[\vec \beta, \sigma^2] \propto \frac{1}{\sigma^2}
+\]
+
+Our posterior distribution is then:
+
+\[
+\begin{split}
+P[\vec \beta, \sigma^2 | y, X] &\propto \frac{1}{\sigma^2} \prod_{i=1}^n N(y_i; \vec x_i^T \vec \beta , \sigma^2) \\
+&\propto \frac{1}{\sigma^{n+2}} \exp \left[-\frac{1}{2 \sigma^2} \sum_i^n(y_i - \vec x_i^T \beta)^2 \right]
+\end{split}
+\]
+
+Although this full posterior, when treated as a density over both
+\(\vec \beta\) and \(\sigma^2\), does not correspond to a named
+distribution, some of the conditional and marginal posteriors \emph{do}.
+
+The most obvious conditional which can be interpreted is simply: \[
+P[\vec \beta| \sigma^2, y, X] = MVN( \hat \beta, V_\beta \sigma^2 )
+\] Here the multivariate mean \(\hat \beta\) is the least squares
+estimator the we are closely acquainted with:
+\(\hat \beta = (X^TX)^{-1}X^Ty\), and the matrix
+\(V_{\beta} = (X^TX)^{-1}\). Notice that the mean and variance matrix of
+this conditional posterior match exactly to their corresponding
+``frequentist'' versions (the MLE and standard error).
+
+Besides the conditional posterior over \(\vec \beta\), the marginal over
+\(\sigma^2\) has the form:
+
+\[
+P[\sigma^2 | y] = \text{Inv-}\chi^2(n-k, s^2)
+\] Where \(k\) is the number of columns in \(X\), and
+\(s^2= \frac{1}{n-k}(y-X \hat \beta)^T(y-X \hat \beta)\)
+
+\hypertarget{fitting}{%
+\section{Fitting}\label{fitting}}
+
+Last lecture we saw some simple algorithms that we could apply to draw
+samples from a given posterior density function. As mentioned, in
+practice it is not common to implement these algorithms by hand.
+Instead, it is strongly recommended to use a package which will handle
+the sampling for you.
+
+One such package available in R is \texttt{rstanarm}. \texttt{rstanarm}
+is actually a ``wrapper'', a package which provides a simple interface
+to a more complicated software utility. In this case, the utility that
+it provides access to is \emph{another} wrapper, \texttt{rstan}, which
+wraps a probabilistic programming language called Stan. Stan is an
+incredibly powerful tool for performing Bayesian inference, however its
+workflow can be a little complicated (I have some lecture notes
+available
+\href{https://github.com/proof-by-accident/stan_lectures}{here} if
+you're interested).
+
+Writing a bunch of Stan code from scratch when you just want to perform
+a regression is a huge hassle, especially compared to the simplicity of
+\texttt{lm}, hence \texttt{rstanarm} provides a regression toolset that
+matches the functions we are already familiar with.
+
+Let's use \texttt{rstanarm} to perform a linear regression on the
+\texttt{fuel} dataset from Lecture 4. We'll regress GAS (gas consumption
+per state, in millions of gallons) against TAX (state gas tax in cents)
+and POP (state population, in millions of people):
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(tidyverse)}
+\FunctionTok{library}\NormalTok{(magrittr)}
+
+\NormalTok{fuel }\OtherTok{=} \FunctionTok{read.csv}\NormalTok{(}\StringTok{\textquotesingle{}../../data/fuel.csv\textquotesingle{}}\NormalTok{) }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ drop\_na}
+\NormalTok{fuel }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ head}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##    pop  tax licenses income  hwy  gas state
+## 1 1029  9.0      540   3571 1976  557    ME
+## 2  771  9.0      441   4092 1250  404    NH
+## 3  462  9.0      268   3865 1586  259    VT
+## 4 5787  7.5     3060   4870 2351 2396    MA
+## 5  968  8.0      527   4399  431  397    RI
+## 6 3082 10.0     1760   5342 1333 1408    CT
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{stdize }\OtherTok{=} \ControlFlowTok{function}\NormalTok{(x)\{(x}\SpecialCharTok{{-}}\FunctionTok{mean}\NormalTok{(x))}\SpecialCharTok{/}\FunctionTok{sd}\NormalTok{(x)\}}
+\NormalTok{dat }\OtherTok{=}\NormalTok{ fuel }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{select}\NormalTok{(}\FunctionTok{c}\NormalTok{(tax,pop)) }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ dplyr}\SpecialCharTok{::}\FunctionTok{mutate}\NormalTok{(}\AttributeTok{pop=}\FunctionTok{stdize}\NormalTok{(pop),}\AttributeTok{tax=}\FunctionTok{stdize}\NormalTok{(tax)) }
+\NormalTok{dat[}\StringTok{\textquotesingle{}gas\textquotesingle{}}\NormalTok{] }\OtherTok{=}\NormalTok{ fuel}\SpecialCharTok{$}\NormalTok{gas}
+
+\NormalTok{mod }\OtherTok{=}\NormalTok{ rstanarm}\SpecialCharTok{::}\FunctionTok{stan\_lm}\NormalTok{(gas}\SpecialCharTok{\textasciitilde{}}\NormalTok{tax}\SpecialCharTok{+}\NormalTok{pop, dat, }\AttributeTok{prior=}\ConstantTok{NULL}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## SAMPLING FOR MODEL 'lm' NOW (CHAIN 1).
+## Chain 1: 
+## Chain 1: Gradient evaluation took 1.8e-05 seconds
+## Chain 1: 1000 transitions using 10 leapfrog steps per transition would take 0.18 seconds.
+## Chain 1: Adjust your expectations accordingly!
+## Chain 1: 
+## Chain 1: 
+## Chain 1: Iteration:    1 / 2000 [  0%]  (Warmup)
+## Chain 1: Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Chain 1: Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Chain 1: Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Chain 1: Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Chain 1: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Chain 1: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Chain 1: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Chain 1: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Chain 1: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Chain 1: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Chain 1: Iteration: 2000 / 2000 [100%]  (Sampling)
+## Chain 1: 
+## Chain 1:  Elapsed Time: 0.25227 seconds (Warm-up)
+## Chain 1:                0.094586 seconds (Sampling)
+## Chain 1:                0.346856 seconds (Total)
+## Chain 1: 
+## 
+## SAMPLING FOR MODEL 'lm' NOW (CHAIN 2).
+## Chain 2: 
+## Chain 2: Gradient evaluation took 1.5e-05 seconds
+## Chain 2: 1000 transitions using 10 leapfrog steps per transition would take 0.15 seconds.
+## Chain 2: Adjust your expectations accordingly!
+## Chain 2: 
+## Chain 2: 
+## Chain 2: Iteration:    1 / 2000 [  0%]  (Warmup)
+## Chain 2: Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Chain 2: Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Chain 2: Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Chain 2: Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Chain 2: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Chain 2: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Chain 2: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Chain 2: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Chain 2: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Chain 2: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Chain 2: Iteration: 2000 / 2000 [100%]  (Sampling)
+## Chain 2: 
+## Chain 2:  Elapsed Time: 0.441622 seconds (Warm-up)
+## Chain 2:                0.164681 seconds (Sampling)
+## Chain 2:                0.606303 seconds (Total)
+## Chain 2: 
+## 
+## SAMPLING FOR MODEL 'lm' NOW (CHAIN 3).
+## Chain 3: 
+## Chain 3: Gradient evaluation took 1.2e-05 seconds
+## Chain 3: 1000 transitions using 10 leapfrog steps per transition would take 0.12 seconds.
+## Chain 3: Adjust your expectations accordingly!
+## Chain 3: 
+## Chain 3: 
+## Chain 3: Iteration:    1 / 2000 [  0%]  (Warmup)
+## Chain 3: Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Chain 3: Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Chain 3: Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Chain 3: Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Chain 3: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Chain 3: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Chain 3: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Chain 3: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Chain 3: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Chain 3: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Chain 3: Iteration: 2000 / 2000 [100%]  (Sampling)
+## Chain 3: 
+## Chain 3:  Elapsed Time: 0.327942 seconds (Warm-up)
+## Chain 3:                0.354504 seconds (Sampling)
+## Chain 3:                0.682446 seconds (Total)
+## Chain 3: 
+## 
+## SAMPLING FOR MODEL 'lm' NOW (CHAIN 4).
+## Chain 4: 
+## Chain 4: Gradient evaluation took 1e-05 seconds
+## Chain 4: 1000 transitions using 10 leapfrog steps per transition would take 0.1 seconds.
+## Chain 4: Adjust your expectations accordingly!
+## Chain 4: 
+## Chain 4: 
+## Chain 4: Iteration:    1 / 2000 [  0%]  (Warmup)
+## Chain 4: Iteration:  200 / 2000 [ 10%]  (Warmup)
+## Chain 4: Iteration:  400 / 2000 [ 20%]  (Warmup)
+## Chain 4: Iteration:  600 / 2000 [ 30%]  (Warmup)
+## Chain 4: Iteration:  800 / 2000 [ 40%]  (Warmup)
+## Chain 4: Iteration: 1000 / 2000 [ 50%]  (Warmup)
+## Chain 4: Iteration: 1001 / 2000 [ 50%]  (Sampling)
+## Chain 4: Iteration: 1200 / 2000 [ 60%]  (Sampling)
+## Chain 4: Iteration: 1400 / 2000 [ 70%]  (Sampling)
+## Chain 4: Iteration: 1600 / 2000 [ 80%]  (Sampling)
+## Chain 4: Iteration: 1800 / 2000 [ 90%]  (Sampling)
+## Chain 4: Iteration: 2000 / 2000 [100%]  (Sampling)
+## Chain 4: 
+## Chain 4:  Elapsed Time: 0.349709 seconds (Warm-up)
+## Chain 4:                0.312038 seconds (Sampling)
+## Chain 4:                0.661747 seconds (Total)
+## Chain 4:
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(mod)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Model Info:
+##  function:     stan_lm
+##  family:       gaussian [identity]
+##  formula:      gas ~ tax + pop
+##  algorithm:    sampling
+##  sample:       4000 (posterior sample size)
+##  priors:       see help('prior_summary')
+##  observations: 50
+##  predictors:   3
+## 
+## Estimates:
+##                 mean   sd     10%    50%    90% 
+## (Intercept)   2170.0   74.0 2076.2 2170.6 2265.4
+## tax           -164.9   73.9 -259.8 -165.0  -72.5
+## pop           2028.4   74.1 1933.8 2027.9 2123.0
+## sigma          511.4   55.7  444.4  508.0  585.4
+## log-fit_ratio    0.0    0.0    0.0    0.0    0.0
+## R2               0.9    0.0    0.9    0.9    1.0
+## 
+## Fit Diagnostics:
+##            mean   sd     10%    50%    90% 
+## mean_PPD 2168.4  103.6 2035.6 2168.9 2300.4
+## 
+## The mean_ppd is the sample average posterior predictive distribution of the outcome variable (for details see help('summary.stanreg')).
+## 
+## MCMC diagnostics
+##               mcse Rhat n_eff
+## (Intercept)   1.7  1.0  2009 
+## tax           1.1  1.0  4563 
+## pop           1.6  1.0  2119 
+## sigma         1.2  1.0  2091 
+## log-fit_ratio 0.0  1.0  2019 
+## R2            0.0  1.0  2014 
+## mean_PPD      1.9  1.0  2947 
+## log-posterior 0.1  1.0  1094 
+## 
+## For each parameter, mcse is Monte Carlo standard error, n_eff is a crude measure of effective sample size, and Rhat is the potential scale reduction factor on split chains (at convergence Rhat=1).
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{plot}\NormalTok{(mod)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture24_files/figure-latex/unnamed-chunk-1-1.pdf}
+
+Wow there's a lot of info in this output! We won't be able to cover
+everything, but let's look at the some of the core info. Most of the
+time when you're using \texttt{rstanarm} this info won't tell you much
+that's useful (unless your data has something really weird going),
+nevertheless it's helpful to have an idea of what it's supposed to be
+communicating.
+
+\hypertarget{chains}{%
+\subsection{Chains}\label{chains}}
+
+The \texttt{stan\_lm} function returns a lot of output regarding the
+behavior of the underlying sampler. You'll notice that this output is
+broken into 4 blocks, corresponding to the sampler \textbf{chains}.
+Sampler chains can be thought of as multiple iterations of the same
+sampler, running in parallel. But why would we want this?
+
+Well let's quickly recall how the Metropolis-Hasting sampler works. Stan
+doesn't use Metropolis-Hastings exactly (it uses a souped-up variant
+called Hamiltonian Monte Carlo), but the reasoning still applies.
+
+Recall that Metropolis-Hastings produced samples by \emph{proposing} a
+candidate from \emph{nearby} our previous sample. This means that the
+samples returned by the algorithm \textbf{are not independent}. There is
+correlation between any two adjacent samples in your sampler trajectory
+(and sometimes quite a lot)! This is problematic for our estimates,
+because it can effect how well \(\frac{1}{n} \sum_i^n \theta^{(k)}\)
+approximates \(E_{\theta|y}[\theta]\).
+
+There are many ways to deal with this, but a simple one is to just run a
+lot of samplers independently of each other, ie. \emph{chains}. Since
+the multiple chains share no information, you guarantee that
+\(\theta^{(k)}\) from different chains are independent. Typically 4
+chains are used, but this is more a computational limit than a
+theoretical one, and some samplers operate by running millions of chains
+in parallel.
+
+\hypertarget{log-fit_ratio}{%
+\subsection{\texorpdfstring{\texttt{log-fit\_ratio}}{log-fit\_ratio}}\label{log-fit_ratio}}
+
+This is kind of a weird one, and won't be useful to us in most contexts.
+Crudely speaking, the log-fit ratio is the logarithm of the ratio
+between the posterior variance and the estimate of \(\sigma^2\). Usually
+you want this to be \(\leq 0\), but if it's a small positive value
+that's okay.
+
+\hypertarget{fit-diagnostics}{%
+\subsection{Fit Diagnostics}\label{fit-diagnostics}}
+
+We'll talk about this one more in a second, but if everything is working
+as intended then it should be close to \texttt{mean(fuel\$gas)}:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{mean}\NormalTok{(fuel}\SpecialCharTok{$}\NormalTok{gas)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 2171.88
+\end{verbatim}
+
+\hypertarget{mcmc-diagnostics}{%
+\subsection{MCMC Diagnostics}\label{mcmc-diagnostics}}
+
+There are two quantities that we care about here: \texttt{Rhat} and
+\texttt{n\_eff}. The first, \texttt{Rhat}, is a measure of how well
+``converged'' the sample chains are. Recall from last lecture that
+Metropolis-Hastings (and all related algorithms) have a *burn-in**
+period, a portion of the sampler trajectory where the sampler is trying
+to orient itself in parameter space. \texttt{Rhat} measures whether this
+sampler has adequately left this phase (ie. ``found the posterior''), or
+whether it needs to run for longer. When \texttt{Rhat}\textgreater1 then
+it indicates that burn-in has not finished yet (rule of thumb is
+\texttt{Rhat}\textgreater1.1).
+
+\texttt{n\_eff} on the other hand is a measure of the quality of our
+samples. Above I mentioned that samples are not \emph{independent} of
+each other. One way to think about how this effects
+\(\frac{1}{n} \sum_i^n \theta^{(k)}\) is the concept of \emph{effective
+sample size}. You can imagine that, if the samples are correlate with
+each other, it's like you don't have as much info about
+\(E_{\theta|y}[\theta]\) as if they were uncorrelated; your samples are
+\emph{worth less} than if they were independent. \texttt{n\_eff}
+expresses this concept by converting your true sample size \(N\), to an
+``equivalent N'' represetning how much info you have. Here you're
+looking for \texttt{n\_eff} that's realively large. There's not a clear
+cutoff here, but if \texttt{n\_eff} is \textbf{way} lower than N (like
+N=10,000 and \texttt{n\_eff}=5) then it indicates that your sampler has
+a problem.
+
+\hypertarget{prediction}{%
+\section{Prediction}\label{prediction}}
+
+Now that we've fit our model, let's look at how we could use it for
+prediction. As with Frequentist regression, Bayesian regression
+prediction takes two forms.
+
+\hypertarget{predicting-eyx}{%
+\subsection{\texorpdfstring{Predicting
+\(E[y|X]\)}{Predicting E{[}y\textbar X{]}}}\label{predicting-eyx}}
+
+Recall our go-to formula for predicting the \emph{mean} value of \(y\),
+\(\hat y = X \hat \beta\), where the standard error of this estimate
+could be obtained using that hat matrix:
+\(\text{Var}[\hat y] = \sigma^2 H^T H\). The idea here was that since
+\(\hat \beta\) is our best guess for \(\beta\), \(\hat y\) is our best
+guess for \(y\).
+
+The logic in Bayesian regression is similar, except now instead of a
+single estimate of \(\hat y\), we have a posterior distribution over
+\(\hat y\).
+
+The definition of this posterior is straightforward. Since
+\(E[y] = X^T \vec \beta\) is just a linear function of \(\vec \beta\),
+and could in principal apply the
+\href{https://en.wikipedia.org/wiki/Probability_density_function\#Vector_to_vector}{formula}
+for linear transformations of random variables
+
+However, as with pretty much everything in Bayesian statistics, it is
+computationally easier to perform this operation on our \emph{posterior
+samples} \(\vec \beta ^{(k)}\) rather than doing all the math out by
+hand.
+
+To start, let's say that we want to predict \(\hat y_{\text{new}}\) for
+the new state of Smolorado, which has a gas tax of 10 cents a gallon,
+and a population of 1 million people:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\CommentTok{\# we need to either scale the new data, or the coefficients, by the mean and std of tax and pop}
+
+\NormalTok{tax.mn }\OtherTok{=}\NormalTok{ fuel}\SpecialCharTok{$}\NormalTok{tax }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ mean}
+\NormalTok{tax.sd }\OtherTok{=}\NormalTok{ fuel}\SpecialCharTok{$}\NormalTok{tax }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ sd}
+
+\NormalTok{pop.mn }\OtherTok{=}\NormalTok{ fuel}\SpecialCharTok{$}\NormalTok{pop }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ mean}
+\NormalTok{pop.sd }\OtherTok{=}\NormalTok{ fuel}\SpecialCharTok{$}\NormalTok{pop }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ sd}
+
+\NormalTok{x.new }\OtherTok{=} \FunctionTok{c}\NormalTok{( }\DecValTok{1}\NormalTok{, (}\DecValTok{10}\SpecialCharTok{{-}}\NormalTok{tax.mn)}\SpecialCharTok{/}\NormalTok{tax.sd, (}\DecValTok{1000}\SpecialCharTok{{-}}\NormalTok{pop.mn)}\SpecialCharTok{/}\NormalTok{pop.sd ) }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ as.matrix }\CommentTok{\# 10 cents/gal, 1000 one mil ppl}
+\end{Highlighting}
+\end{Shaded}
+
+Now, the way that we transform the samples \(\vec \beta^{(k)}\) is quite
+simple: \[
+\hat y_{\text{new}}^{(k)} = \vec x_{\text{new}}^T \vec \beta^{(k)}
+\]
+
+In R we can accomplish this with:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{samps }\OtherTok{=} \FunctionTok{as.matrix}\NormalTok{(mod)}
+\NormalTok{samps }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ head}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##           parameters
+## iterations (Intercept)        tax      pop    sigma log-fit_ratio        R2
+##       [1,]    2070.894 -244.21921 2006.324 528.9825  -0.003166805 0.9372796
+##       [2,]    2162.289 -323.55803 2041.183 592.9666   0.028483436 0.9260231
+##       [3,]    2101.837  -84.22966 2015.839 451.2796  -0.020682691 0.9527250
+##       [4,]    2251.861 -134.03288 2160.874 521.4308   0.055449947 0.9457992
+##       [5,]    2227.395 -270.34146 2072.867 487.3227   0.024775948 0.9496628
+##       [6,]    2085.700 -108.58810 2108.525 418.7348   0.020551146 0.9625197
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{beta.samps }\OtherTok{=}\NormalTok{ samps[,}\DecValTok{1}\SpecialCharTok{:}\DecValTok{3}\NormalTok{]}
+\NormalTok{beta.samps }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ head}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##           parameters
+## iterations (Intercept)        tax      pop
+##       [1,]    2070.894 -244.21921 2006.324
+##       [2,]    2162.289 -323.55803 2041.183
+##       [3,]    2101.837  -84.22966 2015.839
+##       [4,]    2251.861 -134.03288 2160.874
+##       [5,]    2227.395 -270.34146 2072.867
+##       [6,]    2085.700 -108.58810 2108.525
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{beta.samps }\SpecialCharTok{\%\textless{}\textgreater{}\%}\NormalTok{ t}
+
+\NormalTok{y.new.samps }\OtherTok{=} \FunctionTok{t}\NormalTok{(x.new) }\SpecialCharTok{\%*\%}\NormalTok{ beta.samps}
+
+\FunctionTok{mean}\NormalTok{(y.new.samps)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 333.5657
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{sd}\NormalTok{(y.new.samps)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 190.1568
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{hist}\NormalTok{(y.new.samps)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture24_files/figure-latex/unnamed-chunk-4-1.pdf}
+
+Notice that the mean of the \(\hat y_{\text{new}}^{(k)}\) is just equal
+to \(x_{\text{new}}^T E_{\beta|y,x_{\text{new}}}[\vec \beta]\):
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{beta.mn }\OtherTok{=}\NormalTok{ beta.samps }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{apply}\NormalTok{(}\DecValTok{1}\NormalTok{,mean)}
+\FunctionTok{print}\NormalTok{(}\FunctionTok{t}\NormalTok{(x.new)}\SpecialCharTok{\%*\%}\NormalTok{beta.mn)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##          [,1]
+## [1,] 333.5657
+\end{verbatim}
+
+We use this line of thinking to compute our ``Bayesian regression
+line'', defined as: \[
+\hat y = X E_{\beta|y,x_{\text{new}}}[\vec \beta]
+\]
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{X }\OtherTok{=}\NormalTok{ dat }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{select}\NormalTok{(tax,pop) }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{cbind}\NormalTok{(}\FunctionTok{matrix}\NormalTok{(}\DecValTok{1}\NormalTok{,}\AttributeTok{nrow=}\FunctionTok{nrow}\NormalTok{(dat)),.) }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ as.matrix}
+\NormalTok{y.hat }\OtherTok{=}\NormalTok{ X }\SpecialCharTok{\%*\%}\NormalTok{ beta.mn }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ as.numeric}
+\end{Highlighting}
+\end{Shaded}
+
+We can also use this quantity to compute some of our usual diagnostics
+(residual vs.~fit plots, QQ plots, etc):
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{resids }\OtherTok{=}\NormalTok{ dat}\SpecialCharTok{$}\NormalTok{gas }\SpecialCharTok{{-}}\NormalTok{ y.hat}
+\NormalTok{resids.std }\OtherTok{=}\NormalTok{ resids }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ stdize}
+
+\FunctionTok{plot}\NormalTok{(y.hat,resids)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture24_files/figure-latex/unnamed-chunk-7-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{car}\SpecialCharTok{::}\FunctionTok{qqPlot}\NormalTok{(resids.std, }\AttributeTok{envelope=}\ConstantTok{FALSE}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture24_files/figure-latex/unnamed-chunk-7-2.pdf}
+
+\begin{verbatim}
+## [1]  7 37
+\end{verbatim}
+
+The regression line can also be obtained directly from
+\texttt{rstanarm}:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{y.hat2 }\OtherTok{=} \FunctionTok{predict}\NormalTok{(mod)}
+\end{Highlighting}
+\end{Shaded}
+
+You may notice that these quantities are \emph{slightly} different:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{y.hat}\SpecialCharTok{{-}}\NormalTok{y.hat2}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##            1            2            3            4            5            6 
+## -0.817398560 -0.844540492 -0.877047691 -0.475217251 -0.929393456 -0.495842694 
+##            7            8            9           10           11           12 
+##  0.900898580 -0.256210404  0.223402275 -0.002420417 -0.474608281  0.099602596 
+##           13           14           15           16           17           18 
+## -0.181367810 -0.661296093 -0.726941698 -0.833510605 -0.636784193 -1.070318707 
+##           19           20           21           22           23           24 
+## -1.075894376 -0.818007529 -0.899261411 -0.971789576 -0.498954256 -0.424471743 
+##           25           26           27           28           29           30 
+## -0.791075999 -0.377131163 -0.750866868 -0.587467027 -0.267572144 -0.578591632 
+##           31           32           33           34           35           36 
+## -0.712739524 -0.767549396 -0.793157786 -0.875928963 -0.639879507 -0.904048325 
+##           37           38           39           40           41           42 
+## -0.122471336 -1.061166195 -0.898907321 -1.100511477 -0.888846483 -1.024766549 
+##           43           44           45           46           47           48 
+## -0.932189414 -1.018349270 -1.186942461 -0.563442647 -0.907256709  1.016454073 
+##           49           50 
+## -0.999352314 -1.263694925
+\end{verbatim}
+
+This is because \texttt{rstanarm} is computing \texttt{y.hat} from the
+full predictive posterior distribution, whereas we are only averaging
+over \(\beta\) here.
+
+\hypertarget{posterior-predictive-distribution}{%
+\subsection{Posterior Predictive
+Distribution}\label{posterior-predictive-distribution}}
+
+Recall that in Frequentist regression we had defined a ``forecasting''
+error, besides our estimate single point estimate \(\hat y\). This
+quantity gave us some expectation about what values of \(y\) were
+plausible, given our OLS estimate \(\hat \beta\). In Bayesian
+regression, the equivalent concept is called the \textbf{posterior
+predictive distribution}.
+
+One way that we can think about the posterior distribution, is as a
+probability distribution over ``possible worlds''. The quantity
+\(P[\beta_1 = 0 | y, X]\) indicates how probable we think it is that we
+are ``in the world'' where \(\beta_1 = 0\). This line of thinking gave
+us one way to reason about marginal posteriors, in the case of multiple
+parameters:
+
+\[
+P[\theta_1 | y] = \int P[\theta_1 | \theta_2, y] P[\theta_2| y] d \theta_2
+\] The posterior predictive distribution \emph{also} follows this
+reasoning. The core idea is fairly simple: under a fixed value of
+\(\vec \beta^*\), we know that that
+\(y \sim N(X \vec \beta^*, \sigma^2)\). Furthermore, using our posterior
+we can assign a probability value to the statement
+\(y \sim N(X \vec \beta^*, \sigma^2)\), specifically we say that the
+probability this is true is \(P[\vec \beta^* | y, X]\), the posterior
+density.
+
+If we were going to \emph{forecast} what future values of \(y\) are
+plausible, it therefore makes the most sense to create a \emph{mixture}
+of all of the forecasts we would obtain under the different values of
+\(\vec \beta\), weighted by how probable we think those values are. This
+mixture is the \textbf{posterior predictive distribution}:
+
+\[
+P[\tilde y | y, X, \tilde x] = \int P[y|\vec \beta, \tilde x] P[\vec \beta | y,X] d \vec \beta
+\] Notice that I'm using \(\tilde y\) and \(\tilde x\) here to
+distinguish \emph{future data} from \emph{observed data} (\(y\)).
+Another way of expressing the same quantity is:
+
+\[
+P[\tilde y | y, \tilde x] = E_{\vec \beta | y, X} \left[ P[y|\vec \beta, \tilde x] \right ]
+\] As with the previous form of prediction, we typically won't compute
+this quantity by hand. Instead, we will draw samples of
+\(\tilde y^{(k)}\), which will use to approximate the mean, variance,
+quantiles etc. of \(P[\tilde y | y, \tilde x]\).
+
+Unlike in the previous example, producing such samples is slightly more
+involved (but not much). The basic idea is to iterate over two steps:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Draw a posterior sample \$\beta\^{}\{(k)\}
+  \sim P{[}\vec \beta \textbar{} y,X{]} \$
+\item
+  Draw a predictive sample \(\tilde y \sim P[y|\beta^{(k)}, \tilde x]\)
+\end{enumerate}
+
+To keep the notation simple here, I am ignoring the fact that we also
+need a sample of \(\sigma^2\), but including this in code is fairly
+simple. Let's create some posterior predictive samples for our example
+state of Smolorado:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{samps }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ head}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##           parameters
+## iterations (Intercept)        tax      pop    sigma log-fit_ratio        R2
+##       [1,]    2070.894 -244.21921 2006.324 528.9825  -0.003166805 0.9372796
+##       [2,]    2162.289 -323.55803 2041.183 592.9666   0.028483436 0.9260231
+##       [3,]    2101.837  -84.22966 2015.839 451.2796  -0.020682691 0.9527250
+##       [4,]    2251.861 -134.03288 2160.874 521.4308   0.055449947 0.9457992
+##       [5,]    2227.395 -270.34146 2072.867 487.3227   0.024775948 0.9496628
+##       [6,]    2085.700 -108.58810 2108.525 418.7348   0.020551146 0.9625197
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{sigma.samps }\OtherTok{=}\NormalTok{ samps[,}\DecValTok{4}\NormalTok{]}
+
+\NormalTok{y.tilde.mn }\OtherTok{=} \FunctionTok{t}\NormalTok{(x.new)}\SpecialCharTok{\%*\%}\NormalTok{ beta.samps }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ as.numeric }\CommentTok{\# notice that this is just our y.new.samps vector from above}
+\NormalTok{y.tilde.samps }\OtherTok{=} \FunctionTok{rnorm}\NormalTok{(}\DecValTok{4000}\NormalTok{,y.tilde.mn, sigma.samps)}
+
+\FunctionTok{mean}\NormalTok{(y.tilde.samps)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 343.9964
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{sd}\NormalTok{(y.tilde.samps)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 542.3484
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{plt.df }\OtherTok{=} \FunctionTok{data.frame}\NormalTok{(}\StringTok{\textquotesingle{}y.hat\textquotesingle{}}\OtherTok{=}\NormalTok{y.tilde.mn,}\StringTok{\textquotesingle{}y.tilde\textquotesingle{}}\OtherTok{=}\NormalTok{y.tilde.samps)}
+
+\FunctionTok{ggplot}\NormalTok{(plt.df) }\SpecialCharTok{+}
+  \FunctionTok{geom\_histogram}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{y.hat),}\AttributeTok{position=}\StringTok{\textquotesingle{}identity\textquotesingle{}}\NormalTok{,}\AttributeTok{alpha=}\NormalTok{.}\DecValTok{3}\NormalTok{,}\AttributeTok{fill=}\StringTok{\textquotesingle{}red\textquotesingle{}}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_histogram}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{y.tilde),}\AttributeTok{position=}\StringTok{\textquotesingle{}identity\textquotesingle{}}\NormalTok{,}\AttributeTok{alpha=}\NormalTok{.}\DecValTok{3}\NormalTok{,}\AttributeTok{fill=}\StringTok{\textquotesingle{}blue\textquotesingle{}}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{x=}\StringTok{\textquotesingle{}GAS\textquotesingle{}}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture24_files/figure-latex/unnamed-chunk-10-1.pdf}
+
+As with the Frequentist forecasting distribution, the predictive
+posterior distribution is far more dispersed than the posterior
+distribution over \(\hat y\).
+
+\hypertarget{aside-prior-predictive-distributions}{%
+\subsubsection{Aside: Prior Predictive
+Distributions}\label{aside-prior-predictive-distributions}}
+
+Besides forecasting the data \emph{after} we've made observations, it's
+sometimes convenient to forecast the data \emph{before} we've seen any
+observations. This quantity can be referred to as a \textbf{prior
+predictive distribution}, and it is defined in the natural way:
+
+\[
+P[\tilde y| \tilde x] = \int P[\tilde y | \vec \beta, \tilde x] P[\vec \beta] d \vec \beta
+\]
+
+The reason we might care about this quantity, is that it helps us
+translate our priors over \(\vec \beta\) into a quantity that is more
+easily interpreted. It's challenging to reason about what slope or
+intercept coefficients are plausible in the real world, but it's often
+easy to reason about the dependent variable \(y\).
+
+For example, let's reduce our GAS regression down to just include the
+variable TAX, and let's use wide, normal prior distributions for both
+\(\beta_0\) and \(\beta_1\):
+
+\[
+\begin{split}
+\text{GAS} &= \beta_0 + \beta_1 POP + \epsilon_i\\
+\beta_0 &\sim N(\mu=0, \sigma=10^6)\\
+\beta_1 &\sim N(\mu=0, \sigma=10^6)
+\end{split}
+\]
+
+Now let's calculate the prior posterior distribution for Smolorado
+(assumign that we know \(\sigma_y = 2118\)):
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{TAX }\OtherTok{=} \DecValTok{10}
+
+\NormalTok{beta0 }\OtherTok{=} \FunctionTok{rnorm}\NormalTok{(}\FloatTok{1e5}\NormalTok{,}\DecValTok{0}\NormalTok{,}\FloatTok{1e9}\NormalTok{)}
+\NormalTok{beta1 }\OtherTok{=} \FunctionTok{rnorm}\NormalTok{(}\FloatTok{1e5}\NormalTok{,}\DecValTok{0}\NormalTok{,}\FloatTok{1e9}\NormalTok{)}
+\NormalTok{y.tilde.samps }\OtherTok{=} \FunctionTok{rnorm}\NormalTok{(}\FloatTok{1e5}\NormalTok{, beta0}\SpecialCharTok{+}\NormalTok{beta1}\SpecialCharTok{*}\NormalTok{TAX, }\DecValTok{2118}\NormalTok{)}
+
+\FunctionTok{hist}\NormalTok{(y.tilde.samps, }\AttributeTok{main=}\StringTok{\textquotesingle{}Predictive Prior over GAS\textquotesingle{}}\NormalTok{ )}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture24_files/figure-latex/unnamed-chunk-11-1.pdf}
+
+Does this prior over the values of GAS make sense? Not really! For one,
+it implies that we beleive that there is a \textasciitilde50\% chance
+that Smolorado consumed more gas than the entire US did in 1990 (113
+billion gallons):
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{sum}\NormalTok{(y.tilde.samps}\SpecialCharTok{\textgreater{}}\NormalTok{(}\FloatTok{113e3}\NormalTok{))}\SpecialCharTok{/}\FunctionTok{length}\NormalTok{(y.tilde.samps) }\CommentTok{\# since GAS is in millions of gallons, 142e3 corresponds to 142 billion gallons}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 0.49901
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{sum}\NormalTok{(y.tilde.samps}\SpecialCharTok{\textgreater{}}\NormalTok{(}\DecValTok{0}\NormalTok{))}\SpecialCharTok{/}\FunctionTok{length}\NormalTok{(y.tilde.samps) }\CommentTok{\# since GAS is in millions of gallons, 142e6 corresponds to 142 billion gallons}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 0.49901
+\end{verbatim}
+
+Moreover, it assumes that it is possible for there to be negative values
+for GAS! Let's choose some narrower priors, and limit our prior on
+\(\beta_0\) to be strictly positive. We'll also center \(\beta_0\) at
+about the average state gas consumption in 1990:
+\(\frac{113e3}{51}\approx 2215\) (in units of millions of gallons). \[
+\begin{split}
+\text{GAS} &= \beta_0 + \beta_1 POP + \epsilon_i\\
+\beta_0 &\sim N_+(\mu=2215, \sigma=10^4)\\
+\beta_1 &\sim N(\mu=0, \sigma=10^5)
+\end{split}
+\]
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{TAX }\OtherTok{=} \DecValTok{10}
+
+\NormalTok{beta0 }\OtherTok{=}\NormalTok{ truncnorm}\SpecialCharTok{::}\FunctionTok{rtruncnorm}\NormalTok{(}\FloatTok{1e5}\NormalTok{,}\AttributeTok{mean=}\DecValTok{2215}\NormalTok{,}\AttributeTok{sd=}\FloatTok{1e4}\NormalTok{,}\AttributeTok{a=}\DecValTok{0}\NormalTok{)}
+\NormalTok{beta1 }\OtherTok{=} \FunctionTok{rnorm}\NormalTok{(}\FloatTok{1e5}\NormalTok{,}\DecValTok{0}\NormalTok{,}\FloatTok{1e3}\NormalTok{)}
+\NormalTok{y.tilde.samps }\OtherTok{=} \FunctionTok{rnorm}\NormalTok{(}\FloatTok{1e5}\NormalTok{, beta0}\SpecialCharTok{+}\NormalTok{beta1}\SpecialCharTok{*}\NormalTok{TAX, }\DecValTok{2118}\NormalTok{)}
+
+\FunctionTok{hist}\NormalTok{(y.tilde.samps, }\AttributeTok{main=}\StringTok{\textquotesingle{}Predictive Prior over GAS\textquotesingle{}}\NormalTok{ )}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture24_files/figure-latex/unnamed-chunk-13-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{sum}\NormalTok{(y.tilde.samps}\SpecialCharTok{\textgreater{}}\NormalTok{(}\FloatTok{142e3}\NormalTok{))}\SpecialCharTok{/}\FunctionTok{length}\NormalTok{(y.tilde.samps) }\CommentTok{\# since GAS is in millions of gallons, 142e6 corresponds to 142 billion gallons}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 0
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{sum}\NormalTok{(y.tilde.samps}\SpecialCharTok{\textgreater{}}\NormalTok{(}\DecValTok{0}\NormalTok{))}\SpecialCharTok{/}\FunctionTok{length}\NormalTok{(y.tilde.samps) }\CommentTok{\# since GAS is in millions of gallons, 142e6 corresponds to 142 billion gallons}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 0.76556
+\end{verbatim}
+
+This is a far more reasonable belief about GAS consumption (at least in
+my opinion!) Obviously some negative values are still present, but
+that's always going to be baked-in for linear regression, and in our
+prior only represents about 25\% of our belief, so we'll live with it!
+
+\end{document}

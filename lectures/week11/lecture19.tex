@@ -1,0 +1,813 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={Lecture 19- Partial Pooling},
+  pdfauthor={Peter Shaffery},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\title{Lecture 19- Partial Pooling}
+\author{Peter Shaffery}
+\date{3/30/2021}
+
+\begin{document}
+\maketitle
+
+\hypertarget{example---radon}{%
+\section{Example - Radon}\label{example---radon}}
+
+Let's say that you would like to buy a house in Minnesota. A big concern
+when buying a new house is checking its radon levels. Radon is a
+colorless, odorless gas produced as part of the radioactive decay
+process of Uranium. Prolonged exposure to radon can have serious (and
+negative) health consequences, so it's important to buy a house without
+radon!
+
+Fortunately you've got a dataset containing household level radon
+measurements all over Minnesota. Included in this dataset is the
+household's county, the floor on which the measurement was made on, as
+well as some other potentially useful variable. You'd like to use this
+information to find a house with low radon levels.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(tidyverse)}
+\FunctionTok{library}\NormalTok{(magrittr)}
+
+\NormalTok{dat }\OtherTok{=} \FunctionTok{read.csv}\NormalTok{(}\StringTok{\textquotesingle{}../../data/radon\_mn.csv\textquotesingle{}}\NormalTok{)}
+\NormalTok{dat }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ head}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##   idnum state state2 stfips   zip region typebldg floor room basement windoor
+## 1  5081    MN     MN     27 55735      5        1     1    3        N      NA
+## 2  5082    MN     MN     27 55748      5        1     0    4        Y      NA
+## 3  5083    MN     MN     27 55748      5        1     0    4        Y      NA
+## 4  5084    MN     MN     27 56469      5        1     0    4        Y      NA
+## 5  5085    MN     MN     27 55011      3        1     0    4        Y      NA
+## 6  5086    MN     MN     27 55014      3        1     0    4        Y      NA
+##   rep stratum wave starttm stoptm startdt stopdt activity pcterr     adjwt
+## 1   2       4   41     930    930   12088  12288      2.2    9.7 1146.4992
+## 2   5       2   40    1615   1615   11888  12088      2.2   14.5  471.3662
+## 3   3       2   42    1030   1515   20288  21188      2.9    9.6  433.3167
+## 4   2       2   24    1410   1410  122987 123187      1.0   24.3  461.6237
+## 5   3       2   40     600    600   12888  13088      3.1   13.8  433.3167
+## 6   5       2   22     900   1300  120287 121187      2.5   12.8  471.3662
+##   dupflag zipflag cntyfips county
+## 1       1       0        1 AITKIN
+## 2       0       0        1 AITKIN
+## 3       0       0        1 AITKIN
+## 4       0       0        1 AITKIN
+## 5       0       0        3  ANOKA
+## 6       0       0        3  ANOKA
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{hist}\NormalTok{(dat}\SpecialCharTok{$}\NormalTok{activity)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture19_files/figure-latex/unnamed-chunk-1-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{dat}\SpecialCharTok{$}\NormalTok{log\_radon }\OtherTok{=} \FunctionTok{log}\NormalTok{(dat}\SpecialCharTok{$}\NormalTok{activity}\FloatTok{+.001}\NormalTok{)  }\CommentTok{\# since activity bounded convert to log scale, offset slightly to avoid issues with log(0)}
+\FunctionTok{hist}\NormalTok{(dat}\SpecialCharTok{$}\NormalTok{log\_radon)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture19_files/figure-latex/unnamed-chunk-1-2.pdf}
+
+\hypertarget{model-1--county-level-averages}{%
+\subsection{Model 1- County-level
+Averages}\label{model-1--county-level-averages}}
+
+Let's start by imagining the simplest possible model of radon levels in
+the state of Minnesota:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{pool }\OtherTok{=} \FunctionTok{mean}\NormalTok{(dat}\SpecialCharTok{$}\NormalTok{log\_radon,}\AttributeTok{na.rm=}\ConstantTok{TRUE}\NormalTok{)}
+\NormalTok{pool}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 1.208567
+\end{verbatim}
+
+It may not seem like much, but even a sample average is (technically) a
+type of model: \[
+y_i = \mu + \epsilon_i
+\] We'll call this model our \emph{pooled} model, since it ignores any
+differences in radon measurements due to county, floor of measurement,
+etc. It's just \emph{pooling} all of the datapoints together and taking
+a mean
+
+Now, obviously this model has problems. For one it has \(R^2=0\) (since
+the SSR term is just equal to SSE). If we're trying to estimate the
+radon in house within a given county, our sample mean is probably going
+to be off by quite a lot!
+
+A simple way to account for differences by mean counties would be to
+simply group our data at the county level, and then take an average:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{sigma.y }\OtherTok{=} \FunctionTok{sd}\NormalTok{(dat}\SpecialCharTok{$}\NormalTok{log\_radon)}
+\NormalTok{unpool }\OtherTok{=}\NormalTok{ dat }\SpecialCharTok{\%\textgreater{}\%} 
+  \FunctionTok{group\_by}\NormalTok{(county) }\SpecialCharTok{\%\textgreater{}\%}
+  \FunctionTok{summarize}\NormalTok{(}\AttributeTok{radon\_mn=}\FunctionTok{mean}\NormalTok{(log\_radon), }\AttributeTok{radon\_se=}\NormalTok{sigma.y}\SpecialCharTok{/}\FunctionTok{sqrt}\NormalTok{(}\FunctionTok{n}\NormalTok{()), }\AttributeTok{size=}\FunctionTok{n}\NormalTok{() )}
+\end{Highlighting}
+\end{Shaded}
+
+Note that the county average \(\mu_j\) has standard error
+\(\frac{\hat \sigma_j}{\sqrt{n}}\) (why?).
+
+We'll call this our \emph{unpooled} model, since it is \textbf{not}
+ignoring differences due to county. We are not treating the data as one
+homogeneous pool anymore, but rather separating out the data into
+groups.
+
+There are two ways we could think about this model. The first is a model
+which estimates a separate mean \(\mu_j\) for each county \(j\):
+
+\[
+y_i = \mu_{j[i]} + \epsilon_i 
+\] Here I am introducing a special index notation \(j[i]\), which means
+that the county index \(j\) which corresponds to datapoint \(i\).
+
+We could have also written this model in our usual regression format but
+introducing dummy variables for each county. Recall that, because we
+have more than two counties, we must \emph{one-hot encode} the
+``county'' variable, that is create a binary indicator variable \(C_j\),
+for each of the \(j=1,...,K\) counties. That model would look like:
+
+\[
+y_i = \beta_0 + \sum_{j=1}^K \beta_j C_{ji} + \epsilon_i 
+\] Where \(\beta_0 + \beta_j = \mu_j\)
+
+While this model does a good job accounting for variation in radon
+levels between counties, it has a problem:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{dat}\SpecialCharTok{$}\NormalTok{county }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ table }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ sort}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## .
+##       MAHNOMEN         MURRAY         WILKIN           COOK       FILLMORE 
+##              1              1              1              2              2 
+##    LACQUIPARLE      MILLELACS           POPE           ROCK        STEVENS 
+##              2              2              2              2              2 
+## YELLOWMEDICINE         BECKER       BIGSTONE          DODGE         ISANTI 
+##              2              3              3              3              3 
+##      KANDIYOHI        KITTSON        LINCOLN         NOBLES         NORMAN 
+##              3              3              3              3              3 
+##     PENNINGTON       RENVILLE           TODD       WATONWAN         AITKIN 
+##              3              3              3              3              4 
+##         BENTON          BROWN       CHIPPEWA     CLEARWATER     COTTONWOOD 
+##              4              4              4              4              4 
+##        KANABEC LAKEOFTHEWOODS         MEEKER       NICOLLET      PIPESTONE 
+##              4              4              4              4              4 
+##           POLK         SIBLEY          SWIFT       TRAVERSE         WASECA 
+##              4              4              4              4              4 
+##           CASS        HUBBARD        JACKSON        LESUEUR        REDWOOD 
+##              5              5              5              5              5 
+##         WADENA         CARVER        CHISAGO      FARIBAULT        HOUSTON 
+##              5              6              6              6              6 
+##           PINE        WABASHA       BELTRAMI    KOOCHICHING         MARTIN 
+##              6              6              7              7              7 
+##      SHERBURNE           LYON      OTTERTAIL        DOUGLAS       FREEBORN 
+##              7              8              8              9              9 
+##           LAKE       MARSHALL       MORRISON        CARLTON           CLAY 
+##              9              9              9             10             10 
+##         ITASCA           RICE          SCOTT         STEELE       CROWWING 
+##             10             10             10             10             11 
+##          MOWER      BLUEEARTH         MCLEOD         WINONA         WRIGHT 
+##             12             13             13             13             13 
+##        GOODHUE         ROSEAU        OLMSTED        STEARNS         RAMSEY 
+##             14             14             23             24             32 
+##     WASHINGTON          ANOKA         DAKOTA       HENNEPIN        STLOUIS 
+##             42             47             58             99            113
+\end{verbatim}
+
+A lot of counties only have a handful of measurements! What this means
+is that, for these counties, our estimates of \(\mu_j\) are going to
+have high standard error (solid line shows the pooled mean):
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ggplot}\NormalTok{(unpool,}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{size,}\AttributeTok{y=}\NormalTok{radon\_mn,}\AttributeTok{ymin=}\NormalTok{radon\_mn}\SpecialCharTok{+}\NormalTok{radon\_se,}\AttributeTok{ymax=}\NormalTok{radon\_mn}\SpecialCharTok{{-}}\NormalTok{radon\_se)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_errorbar}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_hline}\NormalTok{(}\AttributeTok{yintercept=}\NormalTok{pool) }\SpecialCharTok{+}
+  \FunctionTok{labs}\NormalTok{(}\AttributeTok{x=}\StringTok{\textquotesingle{}Sample Size\textquotesingle{}}\NormalTok{, }\AttributeTok{y=}\StringTok{\textquotesingle{}Estimated mu\textquotesingle{}}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture19_files/figure-latex/unnamed-chunk-5-1.pdf} So
+on the one hand, we had the pooled model. This had the advantage of
+having a very large sample size, so its estimate was highly
+\emph{precise}, but by ignoring county-level variation it has low
+\emph{accuracy}. On the other hand, we have the unpooled model which
+could accurately account for county-level variation, but for small
+counties its estimates weren't precise.
+
+What we need is a compromise model between these two approaches, a
+\textbf{partial pooling} model. It turns out that the model which will
+accomplish this compromise looks like this:
+
+\[
+\begin{split}
+y_i &= \mu_{j[i]} + \epsilon_i\\
+\mu_j &= \alpha + \eta_j\\
+\end{split}
+\] Where \(\eta_j \sim N(0, \sigma^2_{\mu})\) (and similarly
+\(\epsilon_i \sim N(0, \sigma^2)\)). We will refer to the \(\eta_j\) as
+\textbf{group-level errors}, in contrast with the \(\epsilon_i\) which
+are \textbf{individual-level errors}.
+
+Let's take a look at the estimated \(\mu_j\) and their associated
+standard errors. Don't worry about the code right now, what matters is
+the output plot:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(lme4)}
+\FunctionTok{library}\NormalTok{(arm)}
+
+\NormalTok{partial.pool }\OtherTok{=} \FunctionTok{lmer}\NormalTok{(log\_radon}\SpecialCharTok{\textasciitilde{}}\NormalTok{(}\DecValTok{1}\SpecialCharTok{|}\NormalTok{county), }\AttributeTok{data=}\NormalTok{dat)}
+\NormalTok{partial.pool }\OtherTok{=} \FunctionTok{data.frame}\NormalTok{(}\FunctionTok{ranef}\NormalTok{(partial.pool)}\SpecialCharTok{$}\NormalTok{county}\SpecialCharTok{+}\FunctionTok{fixef}\NormalTok{(partial.pool),}\FunctionTok{se.ranef}\NormalTok{(partial.pool)}\SpecialCharTok{$}\NormalTok{county)}
+\NormalTok{partial.pool}\SpecialCharTok{$}\NormalTok{county }\OtherTok{=} \FunctionTok{rownames}\NormalTok{(partial.pool)}
+\NormalTok{partial.pool}\SpecialCharTok{$}\NormalTok{size }\OtherTok{=}\NormalTok{ unpool}\SpecialCharTok{$}\NormalTok{size}
+\FunctionTok{names}\NormalTok{(partial.pool) }\OtherTok{=} \FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}radon\_mn\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}radon\_se\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}county\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}size\textquotesingle{}}\NormalTok{)}
+
+\NormalTok{plt.df }\OtherTok{=} \FunctionTok{rbind}\NormalTok{(unpool,partial.pool)}
+\NormalTok{plt.df}\SpecialCharTok{$}\NormalTok{model }\OtherTok{=} \FunctionTok{rep}\NormalTok{(}\FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}No Pooling\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}Partial Pooling\textquotesingle{}}\NormalTok{),}\AttributeTok{each=}\FunctionTok{nrow}\NormalTok{(unpool))}
+\NormalTok{plt.df }\SpecialCharTok{\%\textless{}\textgreater{}\%} \FunctionTok{filter}\NormalTok{(size}\SpecialCharTok{\textless{}}\DecValTok{30}\NormalTok{)}
+\NormalTok{plt.df}\SpecialCharTok{$}\NormalTok{size }\OtherTok{=}\NormalTok{ plt.df}\SpecialCharTok{$}\NormalTok{size }\SpecialCharTok{+} \FunctionTok{runif}\NormalTok{(}\FunctionTok{nrow}\NormalTok{(plt.df),}\SpecialCharTok{{-}}\DecValTok{5}\NormalTok{,}\DecValTok{5}\NormalTok{)}
+
+\FunctionTok{ggplot}\NormalTok{(plt.df,}\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{size,}\AttributeTok{y=}\NormalTok{radon\_mn,}\AttributeTok{ymin=}\NormalTok{radon\_mn}\SpecialCharTok{+}\NormalTok{radon\_se,}\AttributeTok{ymax=}\NormalTok{radon\_mn}\SpecialCharTok{{-}}\NormalTok{radon\_se)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_errorbar}\NormalTok{() }\SpecialCharTok{+}
+  \FunctionTok{geom\_hline}\NormalTok{(}\AttributeTok{yintercept=}\NormalTok{pool) }\SpecialCharTok{+}
+  \FunctionTok{facet\_wrap}\NormalTok{(}\SpecialCharTok{\textasciitilde{}}\NormalTok{model)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture19_files/figure-latex/unnamed-chunk-6-1.pdf}
+
+As expected, the partial-pooling estimate has compromised between the
+pooled and unpooled estimates of the \(\mu\). We see that in the partial
+pooling all the \(\mu_j\) have been pulled closer to the pooled mean,
+and that their standard errors have been substantially equalized.
+
+But why does this work? What about introducing that second level of
+randomness into our model causes the estimates to push together?
+
+There are two (equivalent) explanations. The first is simply an
+approximation of \$\hat{\mu}\_j\^{}\{(\text{partial pooled})\} \$: \[
+\hat \mu_j^{(\text{partial pooled})} \approx \frac{ \frac{n_j}{\sigma^2_y} \bar y_j + \frac{1}{\sigma^2_{\mu}} \bar y  }{\frac{n_j}{\sigma^2_y} + \frac{1}{\sigma^2_{\mu}}}
+\] Here we clearly see that the partial-pooling estimate is a weighted
+average between the pooled and unpooled estimates. When either \(n_j\)
+(the number of observations in county \(j\)) or \(\sigma^2_{\mu}\) is
+large then the unpooled estimate dominates the average. On the other
+hand, for the counties with small sample sizes, or when \(\sigma_y^2\)
+is large, then the pool estimate takes over.
+
+While this formula makes clear \emph{what} is happening, it doesn't
+provide much insight into \emph{why} it's happening.
+
+Let's look at \(\sigma^2_{\mu}\). What is the interpretation of this
+parameter? Well, by definition:
+
+\[
+\sigma^2_{\mu} = \text{Var}[(\mu_j - \alpha)^2]
+\] That is, \(\sigma^2_{\mu}\) controls (on average) how far apart the
+\(\mu_j\) can be from their mean, and consequently from each other. Put
+another way, if we have two county \(\mu_j\) and \(\mu_k\), you can show
+that: \[
+E[(\mu_j - \mu_k)^2] = 2 \sigma^2_{\mu}
+\] Now consider one of the counties with a very high sample size, say
+St.~Louis county (n=113). This gives us a very confident estimate of
+\(\mu \approx .8\) for St.~Louis' average log-radon levels. Moreover,
+from our partially pooled model we have an estimate of
+\(\sigma_{\mu}=.33\) (don't worry about how we got this just yet). That
+means that, roughly speaking, we can expect 99\% of the other \(\mu_j\)
+to fall with 3 standard deviations of St.~Louis, ie. the range
+\(.8 \pm .99\). Thus, even for the counties with very few observations,
+we already have a lot of information about what the plausible values of
+their \(\mu_j\) could be. Even if the estimate is still a little less
+precise, we're almost positive that it won't be less than
+\(\approx -.2\).
+
+Speaking a little more qualitatively, our partial pooling model allows
+different county groups to \emph{share information} with each other. By
+assuming a common distribution on the \(\mu_j\), with a variance
+\(\sigma^2_{\eta}\) we are effectively curtailing the possible range
+that an estimate of \(\mu_j\) can take.
+
+\hypertarget{model-2---county-level-regressions}{%
+\subsection{Model 2 - County-level
+Regressions}\label{model-2---county-level-regressions}}
+
+So our partially-pooled county model is all well and good, it gives us a
+nice estimate for the \textbf{county-level mean log-radon levels}. But
+it isn't the whole story, what about the floor variable? Radon seeps up
+from the ground, so we would expect there to be a relationship between
+floor of measurement and radon activity.
+
+As with our simple model, we have three options.
+
+The first option is a simple pooled regression:
+
+\[
+y_i = \beta_0 + \beta_1 x_i + \epsilon_i
+\] Here \(x_i\) is our floor indicator (\(x_i=1\) if the measurement was
+made in a basement, and is 0 otherwise).
+
+\hypertarget{aside-what-counts-as-pooling}{%
+\paragraph{Aside: What counts as
+``Pooling''?}\label{aside-what-counts-as-pooling}}
+
+\textbf{\textless aside\textgreater{}}
+
+Depending on your perspective, you could also consider this model to be
+``unpooled'' (of the previous type) where the basement indicator is the
+grouping variable. While this is the case in this specific example
+because of the definition of \(x_i\), everything here can also be
+applied to cases where \(x_i\) is continuous. In that case it would no
+longer be appropriate to think of \(x_i\) as a grouping variable, and
+thus the model would no longer have the interpretation as an unpooled
+model. For this reason I will be referring to this as the ``pooled''
+model.
+
+\textbf{\textless/aside\textgreater{}}
+
+We might also perform an ``unpooled'' regression, that is a regression
+which includes county-level information. Recall that the ``dummy
+variable'' approach gives us two options for this.
+
+The first is a simple regression including both the floor variable
+(\(x_i\)) as well as the county-level indicators that we saw from the
+last example (\(C_{ji}\)): \[
+y_i = \beta_0 + \beta_1 x_i + \sum_{j=2}^K \beta_j C_{ji} + \epsilon_i 
+\]
+
+We might also want to include \emph{interaction} terms between \(x_i\)
+and the \(C_{ji}\), that is add a
+\(\sum_{j=K+1}^{2K} \beta_j C_{ji} x_i\) term to the above model. For
+simplicity, we will not deal with the interaction model just yet, but
+keep it in mind.
+
+Now, observe that our model with the county level indicators could also
+be written: \[
+y_i = \beta_{0j[i]} + \beta_1 x_i + + \epsilon_i 
+\] Where \(\beta_{0j} = \beta_0 + \beta_j\). That is, our indicator
+variable model is equivalent to estimating separate intercept terms for
+each county (this was the logic behind the Simpson's Paradox example way
+back in Lecture 7).
+
+Let's fit both the pooled and unpooled variables, and look at the
+results for a few counties.
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{pooled }\OtherTok{=} \FunctionTok{lm}\NormalTok{(log\_radon }\SpecialCharTok{\textasciitilde{}}\NormalTok{ floor, }\AttributeTok{data=}\NormalTok{dat)}
+\NormalTok{unpooled }\OtherTok{=}  \FunctionTok{lm}\NormalTok{(log\_radon }\SpecialCharTok{\textasciitilde{}}\NormalTok{ floor }\SpecialCharTok{+}\NormalTok{ county, }\AttributeTok{data=}\NormalTok{dat)}
+
+\NormalTok{plt.df }\OtherTok{=}\NormalTok{ dat}
+\NormalTok{plt.df}\SpecialCharTok{$}\NormalTok{pooled }\OtherTok{=} \FunctionTok{predict}\NormalTok{(pooled)}
+\NormalTok{plt.df}\SpecialCharTok{$}\NormalTok{unpooled }\OtherTok{=} \FunctionTok{predict}\NormalTok{(unpooled)}
+\NormalTok{counties }\OtherTok{=} \FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}LACQUIPARLE\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}AITKIN\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}KOOCHICHING\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}STLOUIS\textquotesingle{}}\NormalTok{)}
+\NormalTok{plt.df }\SpecialCharTok{\%\textless{}\textgreater{}\%} \FunctionTok{filter}\NormalTok{( county }\SpecialCharTok{\%in\%}\NormalTok{ counties )}
+
+\FunctionTok{ggplot}\NormalTok{(plt.df, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{floor)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y=}\NormalTok{log\_radon)) }\SpecialCharTok{+} 
+  \FunctionTok{geom\_line}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y=}\NormalTok{pooled)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y=}\NormalTok{unpooled),}\AttributeTok{linetype=}\StringTok{\textquotesingle{}dashed\textquotesingle{}}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{facet\_wrap}\NormalTok{(}\SpecialCharTok{\textasciitilde{}}\NormalTok{county)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture19_files/figure-latex/unnamed-chunk-7-1.pdf}
+Look at the unpooled model (dashed line) for Lac Qui Parle county. It's
+predictions are \emph{way} higher than everywhere else, but there's only
+two datapoints! Again, because the sample size is so small there is a
+substantial amount of uncertainty in \(\beta_{0j}\) (or, equivalently,
+\(\beta_j\)).
+
+As before, we need to apply partial pooling in order to strike a balance
+here: \[
+\begin{split}
+y_i &= \beta_{0j[i]} + \beta_1 x_i + \epsilon_i\\
+\beta_{0j} &\sim N(\mu_{\beta},\sigma_{\beta}^2)\\
+\end{split}
+\]
+
+This model is \emph{very} similar to the partial pooling example we have
+already seen, except now we have added an additional coefficient
+\(\beta_1\) which is constant across counties.
+
+\hypertarget{aside-terminology}{%
+\paragraph{Aside: Terminology}\label{aside-terminology}}
+
+\textbf{\textless aside\textgreater{}} Models like the above are
+sometimes called \textbf{mixed effects models}, that is it contains
+coefficients (``effects'') which are both \textbf{fixed} (the
+\(\beta_1\)) and others which are \textbf{random} (like \(\beta_{0j}\)).
+Models which only contain random effects are sometimes called
+\textbf{random effects models}.
+
+In general, I'm not a big fan of the term ``random effects'', and this
+course I will use either the term \textbf{partial pooling} (as above) or
+\textbf{hierarchical model} (alternately \textbf{multilevel model}).
+It's not that the term ``random effects'' is wrong \emph{per se}, but in
+my opinion ``partial pooling'' describes more accurately how this class
+of model operates. Similarly ``hierarchical model'', as we will see,
+describes an alternative method of understanding how these models can be
+interpreted.
+
+\textbf{\textless{}\aside\textgreater{}}
+
+In R, the standard function we use to fit this kind of model is
+\texttt{lmer} (from the package \texttt{lme4}, \texttt{lmer}=``Linear
+Mixed Effects in R'' and \texttt{lme}=``Linear Mixed Effects''). This
+function operates fairly similar to the usual \texttt{lm} function,
+except the functions look a little different:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{partial }\OtherTok{=}\NormalTok{ lme4}\SpecialCharTok{::}\FunctionTok{lmer}\NormalTok{(log\_radon }\SpecialCharTok{\textasciitilde{}}\NormalTok{ floor }\SpecialCharTok{+}\NormalTok{ (}\DecValTok{1}\SpecialCharTok{|}\NormalTok{county) }\SpecialCharTok{{-}} \DecValTok{1}\NormalTok{, }\AttributeTok{data=}\NormalTok{dat)}
+\end{Highlighting}
+\end{Shaded}
+
+Here note the \texttt{(1\textbar{}county)} term, which corresponds to
+the \(\beta_{0j}\). Unlike the regression table of \texttt{lm},
+\texttt{lmer} contains a little less information:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(partial)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## Linear mixed model fit by REML ['lmerMod']
+## Formula: log_radon ~ floor + (1 | county) - 1
+##    Data: dat
+## 
+## REML criterion at convergence: 2485.7
+## 
+## Scaled residuals: 
+##     Min      1Q  Median      3Q     Max 
+## -8.2498 -0.4658  0.0791  0.5998  3.4901 
+## 
+## Random effects:
+##  Groups   Name        Variance Std.Dev.
+##  county   (Intercept) 2.2037   1.4845  
+##  Residual             0.7464   0.8639  
+## Number of obs: 878, groups:  county, 85
+## 
+## Fixed effects:
+##       Estimate Std. Error t value
+## floor -0.68842    0.08602  -8.003
+\end{verbatim}
+
+Notice that this doesn't include any actual estimates of the
+\(\beta_{0j}\). This is typical for dealing with models of this form, as
+often there will simply be too many \(\beta_{0j}\) for that output to be
+really meaningful. Instead we get estimates of
+\(\sigma^2_{\beta}\approx .1\) and \(\sigma^2_{\epsilon} = .74)\), as
+well as \(\beta_1=-.76\). If we want the specific estimates of the
+\emph{random effects} we need:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{ranef}\NormalTok{(partial) }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ head}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## $county
+##                (Intercept)
+## AITKIN           0.7680406
+## ANOKA            0.8538704
+## BECKER           1.3547609
+## BELTRAMI         1.4640912
+## BENTON           1.3136129
+## BIGSTONE         1.3597361
+## BLUEEARTH        1.9912485
+## BROWN            1.8196611
+## CARLTON          0.9675275
+## CARVER           0.7387944
+## CASS             1.3124984
+## CHIPPEWA         1.5954167
+## CHISAGO          0.9836702
+## CLAY             2.1434851
+## CLEARWATER       1.2191559
+## COOK             0.5690371
+## COTTONWOOD       0.0918021
+## CROWWING         1.1181647
+## DAKOTA           1.3193306
+## DODGE            1.6178280
+## DOUGLAS          1.6678573
+## FARIBAULT        0.5995716
+## FILLMORE         1.1838081
+## FREEBORN         2.0186992
+## GOODHUE          1.9003475
+## HENNEPIN         1.3452033
+## HOUSTON          1.6686977
+## HUBBARD          1.1452881
+## ISANTI           0.9491919
+## ITASCA           0.8443501
+## JACKSON          1.8925295
+## KANABEC          1.1400856
+## KANDIYOHI        1.7187454
+## KITTSON          1.4102957
+## KOOCHICHING      0.7645549
+## LACQUIPARLE      2.5167648
+## LAKE             0.3849690
+## LAKEOFTHEWOODS   1.7073318
+## LESUEUR          1.6313534
+## LINCOLN          1.9077494
+## LYON             1.8835514
+## MAHNOMEN         1.0168304
+## MARSHALL         1.5274713
+## MARTIN           0.9892880
+## MCLEOD           0.9079796
+## MEEKER           1.2289989
+## MILLELACS        0.7431100
+## MORRISON         1.1033950
+## MOWER            1.6199068
+## MURRAY           1.8624668
+## NICOLLET         1.9961438
+## NOBLES           1.7322671
+## NORMAN           1.1147041
+## OLMSTED          1.2840541
+## OTTERTAIL        1.5410471
+## PENNINGTON       0.9712845
+## PINE             0.7169368
+## PIPESTONE        1.7084807
+## POLK             1.5728786
+## POPE             1.0943394
+## RAMSEY           1.1440261
+## REDWOOD          1.8513911
+## RENVILLE         1.4918344
+## RICE             1.8118221
+## ROCK             1.1112913
+## ROSEAU           1.6088190
+## SCOTT            1.6923213
+## SHERBURNE        1.0637233
+## SIBLEY           1.1457662
+## STEARNS          1.4324093
+## STEELE           1.5283794
+## STEVENS          1.5324167
+## STLOUIS          0.8574258
+## SWIFT            0.9103614
+## TODD             1.5394694
+## TRAVERSE         1.8444304
+## WABASHA          1.7269074
+## WADENA           1.1925580
+## WASECA           0.5604706
+## WASHINGTON       1.3526439
+## WATONWAN         2.4155224
+## WILKIN           1.6658837
+## WINONA           1.5749066
+## WRIGHT           1.6013991
+## YELLOWMEDICINE   1.0149470
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{fixef}\NormalTok{(partial)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##      floor 
+## -0.6884206
+\end{verbatim}
+
+Let's add in the predictions from our partially-pooled regression:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{plt.df }\OtherTok{=}\NormalTok{ dat}
+\NormalTok{plt.df}\SpecialCharTok{$}\NormalTok{pooled }\OtherTok{=} \FunctionTok{predict}\NormalTok{(pooled)}
+\NormalTok{plt.df}\SpecialCharTok{$}\NormalTok{unpooled }\OtherTok{=} \FunctionTok{predict}\NormalTok{(unpooled)}
+\NormalTok{plt.df}\SpecialCharTok{$}\NormalTok{partial }\OtherTok{=} \FunctionTok{predict}\NormalTok{(partial)}
+\NormalTok{counties }\OtherTok{=} \FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}LACQUIPARLE\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}AITKIN\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}KOOCHICHING\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}STLOUIS\textquotesingle{}}\NormalTok{)}
+\NormalTok{plt.df }\SpecialCharTok{\%\textless{}\textgreater{}\%} \FunctionTok{filter}\NormalTok{( county }\SpecialCharTok{\%in\%}\NormalTok{ counties )}
+
+\FunctionTok{ggplot}\NormalTok{(plt.df, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{floor)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y=}\NormalTok{log\_radon)) }\SpecialCharTok{+} 
+  \FunctionTok{geom\_line}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y=}\NormalTok{pooled)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y=}\NormalTok{unpooled),}\AttributeTok{linetype=}\StringTok{\textquotesingle{}dashed\textquotesingle{}}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y=}\NormalTok{partial),}\AttributeTok{linetype=}\StringTok{\textquotesingle{}dotted\textquotesingle{}}\NormalTok{,}\AttributeTok{color=}\StringTok{\textquotesingle{}red\textquotesingle{}}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{facet\_wrap}\NormalTok{(}\SpecialCharTok{\textasciitilde{}}\NormalTok{county)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture19_files/figure-latex/unnamed-chunk-11-1.pdf}
+Just like with our first example, we see that the partial pooling
+approach creates a ``compromise'' between the pooled and unpooled
+models. When the county-level sample size is low, the partially pooled
+prediction is very close to the pooled estimate (Aitkin and Koochiching
+counties), but when the sample size is high the partially pooled model
+stays near the unpooled regression. Note that the regression for Lac Qui
+Parle county is still a good bit higher than any other county! Even just
+given those two measurements, it would appear that Lac Qui Parle has
+higher overall radon levels, but nowhere near as high as we would have
+gotten with the unpooled estimate.
+
+As with the previous example, we can see this effect in an approximation
+of the partially pooled estimates:
+
+\[
+\hat \beta_{0j}^{(\text{partial pooled})} \approx \frac{ \frac{n_j}{\sigma^2_y} }{\frac{n_j}{\sigma^2_y}  + \frac{1}{\sigma^2_{\beta}}} (\bar y_j + \beta_1 \bar x_j)  + \frac{ \frac{1}{\sigma^2_{\beta}} }{\frac{n_j}{\sigma^2_y} + \frac{1}{\sigma^2_{\beta}}} \mu_{\beta}
+\] Notice that \((\bar y_j + \beta_1 \bar x_j)\) is the estimate
+\(\hat \beta_{0j}\) from our unpooled model.
+
+\hypertarget{model-3---varying-slopes}{%
+\subsection{Model 3 - Varying Slopes}\label{model-3---varying-slopes}}
+
+So the final variant we will look at today is the logical extension of
+the previous model. So far, the models we have seen have all been
+\emph{varying intercept} models; in the context of the example they
+assume that baseline radon might be different between counties, but that
+the overall effect of the floor the measurement was on is consistent.
+
+This is actually a pretty reasonable assumption for this example, even
+though we might expect different regions of the state to have different
+radon production, once the gas is in the air the physics probably don't
+vary much between St.~Louis and Lac Qui Parle.
+
+Nevertheless, for completeness let's look at a \emph{varying slopes}
+model. Whereas the previous approach was an extension of the model: \[
+y_i = \beta_0 + \beta_1 x_i + \sum_{j=2}^K \beta_j C_{ji} + \epsilon_i 
+\] Now we will extend the interaction model: \[
+y_i = \beta_0 + \beta_1 x_i + \sum_{j=2}^K \beta_j C_{ji} + \sum_{j=K+1}^{2K} \beta_j C_{ji} x_i + \epsilon_i 
+\] Observe that this model is equivalent to: \[
+y_i = \beta_{0j[i]} + \beta_{1j[i]} x_i + \epsilon_i 
+\] So for each county we would be running completely separate
+regressions. As before, this will produce some wild estimates when
+\(n_j\) is small:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{pooled }\OtherTok{=} \FunctionTok{lm}\NormalTok{(log\_radon }\SpecialCharTok{\textasciitilde{}}\NormalTok{ floor, }\AttributeTok{data=}\NormalTok{dat)}
+\NormalTok{unpooled }\OtherTok{=}  \FunctionTok{lm}\NormalTok{(log\_radon }\SpecialCharTok{\textasciitilde{}}\NormalTok{ floor}\SpecialCharTok{*}\NormalTok{county, }\AttributeTok{data=}\NormalTok{dat)}
+
+\NormalTok{plt.df }\OtherTok{=}\NormalTok{ dat}
+\NormalTok{plt.df}\SpecialCharTok{$}\NormalTok{pooled }\OtherTok{=} \FunctionTok{predict}\NormalTok{(pooled)}
+\NormalTok{plt.df}\SpecialCharTok{$}\NormalTok{unpooled }\OtherTok{=} \FunctionTok{predict}\NormalTok{(unpooled)}
+\NormalTok{counties }\OtherTok{=} \FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}LACQUIPARLE\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}AITKIN\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}KOOCHICHING\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}STLOUIS\textquotesingle{}}\NormalTok{)}
+\NormalTok{plt.df }\SpecialCharTok{\%\textless{}\textgreater{}\%} \FunctionTok{filter}\NormalTok{( county }\SpecialCharTok{\%in\%}\NormalTok{ counties )}
+
+\FunctionTok{ggplot}\NormalTok{(plt.df, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{floor)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y=}\NormalTok{log\_radon)) }\SpecialCharTok{+} 
+  \FunctionTok{geom\_line}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y=}\NormalTok{pooled)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y=}\NormalTok{unpooled),}\AttributeTok{linetype=}\StringTok{\textquotesingle{}dashed\textquotesingle{}}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{facet\_wrap}\NormalTok{(}\SpecialCharTok{\textasciitilde{}}\NormalTok{county)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture19_files/figure-latex/unnamed-chunk-12-1.pdf}
+
+Our final partially pooled ``version'' of this model would be: \[
+\begin{split}
+y_i &= \beta_{0j[i]} + \beta_{1j[i]} x_i + \epsilon_i\\
+\beta_{0j} &\sim N(\mu_{\beta_0},\sigma_{\beta_0}^2)\\
+\beta_{1j} &\sim N(\mu_{\beta_1},\sigma_{\beta_1}^2)\\
+\end{split}
+\] We can also fit this type of model with \texttt{lmer}. Similar to how
+\texttt{lm} interprets interaction terms \texttt{floor*county},
+\texttt{lmer} will expand \texttt{(floor\textbar{}county)} to include
+\texttt{(1\textbar{}county)} as well:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{partial }\OtherTok{=} \FunctionTok{lmer}\NormalTok{(log\_radon }\SpecialCharTok{\textasciitilde{}}\NormalTok{ (floor}\SpecialCharTok{|}\NormalTok{county), }\AttributeTok{data=}\NormalTok{dat)}
+
+\NormalTok{plt.df }\OtherTok{=}\NormalTok{ dat}
+\NormalTok{plt.df}\SpecialCharTok{$}\NormalTok{pooled }\OtherTok{=} \FunctionTok{predict}\NormalTok{(pooled)}
+\NormalTok{plt.df}\SpecialCharTok{$}\NormalTok{unpooled }\OtherTok{=} \FunctionTok{predict}\NormalTok{(unpooled)}
+\NormalTok{plt.df}\SpecialCharTok{$}\NormalTok{partial }\OtherTok{=} \FunctionTok{predict}\NormalTok{(partial)}
+\NormalTok{counties }\OtherTok{=} \FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}LACQUIPARLE\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}AITKIN\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}KOOCHICHING\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}STLOUIS\textquotesingle{}}\NormalTok{)}
+\NormalTok{plt.df }\SpecialCharTok{\%\textless{}\textgreater{}\%} \FunctionTok{filter}\NormalTok{( county }\SpecialCharTok{\%in\%}\NormalTok{ counties )}
+
+\FunctionTok{ggplot}\NormalTok{(plt.df, }\FunctionTok{aes}\NormalTok{(}\AttributeTok{x=}\NormalTok{floor)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_point}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y=}\NormalTok{log\_radon)) }\SpecialCharTok{+} 
+  \FunctionTok{geom\_line}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y=}\NormalTok{pooled)) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y=}\NormalTok{unpooled),}\AttributeTok{linetype=}\StringTok{\textquotesingle{}dashed\textquotesingle{}}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{geom\_line}\NormalTok{(}\FunctionTok{aes}\NormalTok{(}\AttributeTok{y=}\NormalTok{partial),}\AttributeTok{linetype=}\StringTok{\textquotesingle{}dotted\textquotesingle{}}\NormalTok{,}\AttributeTok{color=}\StringTok{\textquotesingle{}red\textquotesingle{}}\NormalTok{) }\SpecialCharTok{+}
+  \FunctionTok{facet\_wrap}\NormalTok{(}\SpecialCharTok{\textasciitilde{}}\NormalTok{county)}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture19_files/figure-latex/unnamed-chunk-13-1.pdf}
+
+\end{document}

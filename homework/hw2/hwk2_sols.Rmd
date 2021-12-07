@@ -1,0 +1,191 @@
+---
+title: "Homework 2"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+## Due Date
+**March 2nd at 4pm**
+
+## Tricky Questions
+State whether you agree or disagree with the following statements, and explain your reasoning.
+
+a. Removing an outlier or high leverage point always increases $R^2$.
+
+**False**. *It depends on the data! Examples:*
+```{r}
+library(tidyverse)
+library(magrittr)
+
+x1 = seq(0,9,1)
+y1 = 2*x1 
+y1[8] = 3*x1[8]
+
+x2 = runif(10)
+y2 = runif(10)
+x2[10] = 9
+y2[10] = 9
+
+
+plot(x1,y1,col='blue',xlab='x',ylab='y')
+points(x2,y2,col='red')
+
+# Example 1, outlier:
+summary(lm(y1~x1))$r.squared
+
+# Example 1, no outlier:
+summary(lm(y1[-8]~x1[-8]))$r.squared
+
+# Example 2, outlier:
+summary(lm(y2~x2))$r.squared
+
+# Example 2, no outlier:
+summary(lm(y2[-10]~x2[-10]))$r.squared
+```
+
+b. If the correlation matrix between all independent variables in a regression model has an off-diagonal element near 1, then that indicates that at least one pair of independent variables are *collinear* with each other
+**True** *This is just the definition of collinearity.*
+
+c. The numerical values chosen for a dummy variable do not impact the performance of the regression model 
+**True-ish** *The numerical values themselves don't matter, but the spacing does!*
+
+
+## RABE 3.3 
+A teacher has created a dataset containing the scores on a final examination $F$, as well as the scores in two preliminary examinations $P_1$ and $P_2$ for 22 students in a statistics course. The data can be found on Canvas under `Files>data>exams.csv`.
+
+a. Fit each of the following models to the data:
+$$
+\begin{split}
+\text{Model 1: } F_i &= \beta_0 + \beta_1 P_{1i} + \epsilon_i\\
+\text{Model 2: } F_i &= \beta_0 + \beta_2 P_{2i} + \epsilon_i\\
+\text{Model 3: } F_i &= \beta_0 + \beta_1 P_{1i} + \beta_2 P_{2i} + \epsilon_i\\
+\end{split}
+$$
+b. Which variable individually, $P_1$ or $P_2$ is a better predictor of $F$?
+c. Which of the three models would you use to predict the final examination scores for a student who scored $P_1=78$ and $P_2=85$? What is your prediction in this case?
+
+```{r}
+library(broom)
+dat = read.csv('../../data/exams.csv')
+
+# a
+mod1 = lm(F~P1, data=dat)
+mod2 = lm(F~P2, data=dat)
+mod3 = lm(F~P1+P2, data=dat)
+
+# b
+# since both models have the same number of variables we can just use R-squared 
+summary(mod1)$r.squared
+summary(mod2)$r.squared # winner
+
+# c
+# Now we need to compare across model sizes, adjusted R^2 or AIC (=Mallow's Cp) works here
+mod1 %>% glance # Adj R2 .792, AIC 138
+mod2 %>% glance # Adj R2 .853, AIC 130
+mod3 %>% glance # Adj R2 .874, AIC 128, winner
+
+```
+
+## RABE 3.14 + 4.7
+A national insurance organization wanted to study the consumption of cigarettes in all 50 states and the District of Columbia. The data from 1970 are available on Canvas under `Files>data>cigarettes.csv`, and the variable definitions are given in the table below. For parts (a) and (b) below, specify the null and alternative hypotheses, the test used, and your conclusion using a significance $\alpha=.05$.
+
+| Variable | Definition |
+|-|-|
+| AGE | Median of the state's population |
+| HS | Percentage of people over 25 years of age in a state who had completed high school |
+| INCOME | Per capita personal income for a state (in dollars) |
+| FEMALE | Percentage of population identified as "female" |
+| PRICE | Average price (in cents) of a pack of cigarettes in the state |
+| SALES | Number of packs of cigarettes sold in a state per capita |
+
+a. Test the hypothesis that the variable FEMALE is not needed in the regression equation relating SALES to the five predictor variables
+b. Determine whether the variables FEMALE and HS should be included in the above regression equation
+c. Compute that 95\% Confidence Interval for the true regression coefficient of the variable INCOME.
+d. What percentage of the variation in SALES can be accounted for by the three variables PRICE, AGE, and INCOME?
+e. Using an added variable plot, show the effect of including the INCOME variable
+f. What percentage of the variation in SALES can be accounted for when INCOME is removed from the above regression? 
+g. Compute the pairwise correlation coefficients matrix and construct the corresponding scatter plot matrix.
+h. Are there any disagreements between the pairwise correlation coefficients and the corresponding scatter plot matrix?
+i. Is there any difference between your expectations in part (a) and what you see in the pairwise correlation coefficients matrix, or in the scatter plot matrix?
+
+```{r}
+dat = read.csv('../../data/cigarettes.csv')
+
+# a
+# H0: beta_FEMALE = 0, HA: beta_FEMALE =/= 0, alpha=.05
+# we can test this hypothesis using a t-test on just the FEMALE coefficient
+mod.full = lm(sales~., data=dat%>%select(-state))
+mod.full %>% summary
+
+# t-stat is ~.21 and p-value is .838, fail to reject H0
+
+# b
+# As with 3.3 compare across model sizes, adjusted R^2 works here
+mod.reduced = lm(sales~ age+income+price, data=dat)
+
+summary(mod.full)$adj.r.squared
+summary(mod.reduced)$adj.r.squared # winner
+
+# c
+confint(mod.reduced, level=.95) # use preferred model for cofidence interval
+
+# d 
+# now report R-squared
+summary(mod.reduced)$r.squared
+
+# e
+mod.no.income = lm(sales~age+price, data=dat)
+mod.income = lm(income~age+price, data=dat)
+
+resids.x = resid(mod.income)
+resids.y = resid(mod.no.income)
+plot(resids.x,resids.y,
+     xlab='Residuals INCOME~AGE+PRICE',
+     ylab='Residuals SALES~AGE+PRICE',
+     main='Added Variable Plot' )
+
+# f
+summary(mod.no.income)$r.squared
+
+# g
+cor(dat%>%select(-state))
+pairs(dat%>%select(-state))
+
+# h
+# no obvious disagreements
+
+```
+
+## RABE 4.1a
+Using the milk production dataset (on canvas under `Files>data>milk_production.csv`, described in RABE pages 3-4), fit the following model:
+
+$$
+\text{CURRMILK} = \beta_0 + \beta_1 \text{PREVIOUS} + \beta_2 \text{FAT} + \beta_3 \text{PROTEIN} + \beta_4 \text{DAYS} + \beta_5 \text{LACTAT} + \beta_6 \text{I79}
+$$
+
+Now, for your fit model determine:
+
+* If the regression assumptions (linearity and iid normal errors) are met
+* If any outliers are present in the data
+* If any linear dependence exists between the independent variables
+
+```{r}
+dat = read.csv('../../data/milk_production.csv')
+
+mod = lm(currmilk~previous+fat+protein+days+lactat+i79, data=dat)
+
+# linearity, normality, heteroskedasticity all look OK, but a few outliers
+plot(mod)
+
+dat.no.outs = dat[-c(1,16),] # based on Cook's D let's cut 1 and 16
+
+# we have a few ways of checking for collinearity:
+car::vif(mod)
+cor(dat.no.outs)
+pairs(dat.no.outs)
+
+# DAYS and I79 seem to have some correlation, but it doesn't seem to be too problematic
+```

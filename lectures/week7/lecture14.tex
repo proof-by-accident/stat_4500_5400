@@ -1,0 +1,755 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{ifxetex,ifluatex}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={Lecture 14- Binomial Regression},
+  pdfauthor={Peter Shaffery},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifluatex
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\title{Lecture 14- Binomial Regression}
+\author{Peter Shaffery}
+\date{3/2/2021}
+
+\begin{document}
+\maketitle
+
+\hypertarget{introduction}{%
+\section{Introduction}\label{introduction}}
+
+\hypertarget{example-titanic-dataset}{%
+\subsection{Example: Titanic dataset}\label{example-titanic-dataset}}
+
+The Titanic dataset contains individual outcomes of about half the
+passangers aboard the famous Titanic- a passanger ship which sank in
+1912. The dataset contains 1132 records, and includes a number of
+variables about each passenger as well as whether they surivived or not:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(tidyverse)}
+\FunctionTok{library}\NormalTok{(magrittr)}
+
+\NormalTok{dat }\OtherTok{=} \FunctionTok{read.csv}\NormalTok{(}\StringTok{\textquotesingle{}../../data/titanic.csv\textquotesingle{}}\NormalTok{)}
+
+\CommentTok{\# the titanic data contains some missing data that we\textquotesingle{}ll just ignore for now....}
+\NormalTok{dat }\SpecialCharTok{\%\textless{}\textgreater{}\%}\NormalTok{ drop\_na}
+
+\CommentTok{\# we don\textquotesingle{}t care about a few of the columns}
+\NormalTok{dat }\SpecialCharTok{\%\textless{}\textgreater{}\%} \FunctionTok{select}\NormalTok{(}\SpecialCharTok{{-}}\FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}name\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}ticket\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}cabin\textquotesingle{}}\NormalTok{))}
+
+\NormalTok{dat }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ head}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##   survived pclass    sex     age sibsp parch     fare embarked
+## 1        1      1 female 29.0000     0     0 211.3375        S
+## 2        1      1   male  0.9167     1     2 151.5500        S
+## 3        0      1 female  2.0000     1     2 151.5500        S
+## 4        0      1   male 30.0000     1     2 151.5500        S
+## 5        0      1 female 25.0000     1     2 151.5500        S
+## 6        1      1   male 48.0000     0     0  26.5500        S
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{dat}\SpecialCharTok{$}\NormalTok{pclass }\SpecialCharTok{\%\textless{}\textgreater{}\%}\NormalTok{ as.factor }
+\end{Highlighting}
+\end{Shaded}
+
+\begin{longtable}[]{@{}
+  >{\raggedleft\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.47}}
+  >{\raggedright\arraybackslash}p{(\columnwidth - 2\tabcolsep) * \real{0.53}}@{}}
+\toprule
+Variable & Def'n \\ \addlinespace
+\midrule
+\endhead
+\texttt{survived} & Whether the passenger survived (1) or not
+(0) \\ \addlinespace
+\texttt{pclass} & Passenger's ticket class (1 is ``first class'',
+etc.) \\ \addlinespace
+\texttt{sex} & Passenger's sex \\ \addlinespace
+\texttt{age} & Passenger's age \\ \addlinespace
+\texttt{sibsp} & Number of siblings and spouses aboard \\ \addlinespace
+\texttt{parch} & Number of parents and children aboard \\ \addlinespace
+\texttt{fare} & Price paid for ticket \\ \addlinespace
+\texttt{embarked} & Port passenger boarded ship (C = Cherbourg, Q =
+Queenstown, S = Southampton) \\ \addlinespace
+\bottomrule
+\end{longtable}
+
+What characteristics predict if someone survived or not?
+
+\hypertarget{logistic-regression}{%
+\subsection{Logistic Regression}\label{logistic-regression}}
+
+One way we could start to answer this question is by modeling the
+survival outcome with a \emph{Bernoulli distribution}. That is, we
+assume that for an individual passenger their survival \(y_i\) is a
+random random variabl, with a probability \(\pi_i\) that \(y_i=1\) (and
+conversely a probability \((1-\pi_i)\) that \(y_i=0\)). For a given
+passenger the PMF of this model is:
+
+\[
+y_i \sim \text{Bernoulli}(\pi_i) = \pi_i^{y_i} (1-\pi_i)^{(1-y_i)}
+\]
+
+Recall that the Bernoulli distribution is a special case of the Binomial
+distribution:
+
+\[
+y_i \sim \text{Binomial}(\pi_i) = {n_i \choose y_i } \pi_i^{y_i} (1-\pi_i)^{(n_i-y_i)}
+\] Where \(n_i=1\).
+
+The expected value of the Bernoulli distribution is: \[
+E[y_i] = \pi_i
+\]
+
+And thus we can make it a GLM using a model for \(\pi_i\):
+
+\[
+g(\pi_i) = \vec{x_i}^T\vec{\beta}
+\]
+
+\hypertarget{a-weird-choice-for-g}{%
+\subsubsection{\texorpdfstring{A Weird Choice for
+\(g\)}{A Weird Choice for g}}\label{a-weird-choice-for-g}}
+
+One choice for \(g\) that sees some usage (for some reason), is a
+\emph{linear probability model}, \(\pi_i= \vec{x_i}^T\vec{\beta}\).
+
+This model has a few problems, but mainly we can get an estimate
+\(\hat{\pi}_i\) which is less than 0 or greater than 1, so that's out.
+
+A slightly more reasonable choice for \(g\) would be model which is
+linear inside \([0,1]\), but constant otherwise. Something like:
+\includegraphics{lecture14_files/figure-latex/unnamed-chunk-2-1.pdf}
+
+This type of model sees some usage in dose-response modeling (see IGLM
+7.3)
+
+\hypertarget{a-nicer-choice-for-g}{%
+\subsubsection{\texorpdfstring{A Nicer Choice for
+\(g\)}{A Nicer Choice for g}}\label{a-nicer-choice-for-g}}
+
+Rather than trying to model \(\pi_i\) directly, we might observe that
+the \emph{natural parameter} for the Binomial distribution is a much
+easier candidate to model: \[
+b(\pi_i) = \log{\left( \frac{\pi_i}{1-\pi_i} \right)}
+\] Certainly this quantity can be positive or negative, which was the
+primary difficulty we had modeling \(\pi\) directly.
+
+Hence a common choice of linke function is simply: \[
+g(\pi_i) = b(\pi_i) = \log{\left( \frac{\pi_i}{1-\pi_i} \right)}
+\]
+
+This function is named the \textbf{logit} function,
+\(g(z) = \log{\left( \frac{z}{1-z} \right)} = \text{logit}(z)\).
+
+Combined, the choice of Bernoulli (or Binomial) distribution and logit
+link function is known as \textbf{logistic regression}. Often this model
+is expressed in terms of the \emph{inverse} logit, or \textbf{logistic}
+function:
+
+\[
+\pi_i = \text{logistic}(\vec{x}_i^T \vec{\beta}) = \frac{\exp{(\vec{x}_i^T \vec{\beta})} }{1+\exp{(\vec{x}_i^T \vec{\beta})}}
+\] \textbf{Take a minute and write down the log-likelihood for this
+choice of distribution and link function}
+
+Writing.
+
+Writing..
+
+Writing\ldots{}
+
+For a single datapoint we said that
+\(y_i \sim \pi_i^{y_i} (1-\pi)^{1-y_i}\), hence the log-likelihood for
+the entire dataset (in terms of \(\pi_i\)) is:
+
+\[
+l(\pi_i) = \sum_i y_i \log\pi_i + (1-y_i) \log(1-\pi_i)
+\]
+
+Now, subbing in
+\(\pi_i = \frac{\exp{(\vec{x}_i^T \vec{\beta})} }{1+\exp{(\vec{x}_i^T \vec{\beta})}}\)
+gives us:
+
+\[
+l(\vec{\beta}) = \sum_i y_i \log{\left(\frac{\exp{(\vec{x}_i^T \vec{\beta})} }{1+\exp{(\vec{x}_i^T \vec{\beta})}} \right)} + (1-y_i) \log{\left( \frac{1}{1+\exp{(\vec{x}_i^T \vec{\beta})}} \right)}
+\]
+
+Which can be simplified to: \[
+l(\vec{\beta}) = \sum_i y_i (\vec{x}_i^T \vec{\beta} ) - \log{(1+\exp{(\vec{x}_i^T \vec{\beta})})}
+\] \#\#\# Interpreting Logistic Regression
+
+Say that we have a simple model with only one variable \(x_i\): \[
+\log{\left( \frac{\pi_i}{1-\pi_i} \right)} = \beta_0 + \beta_1 x_i
+\] How do we interpet the effect of increasing \(x_i\) by 1 unit?
+
+The typical way of interpreting the coefficient \(\beta_1\) is through
+the \textbf{odds ratio}. If we imagine one individual (say a passenger
+in the Titanic dataset) with variable value \(x\), and another with
+variable \(x+1\), then the odds ratio is defined:
+
+\[
+\begin{split}
+\text{OR} &= \frac{ \text{odds}(x+1) }{\text{odds}(x)} \\
+&= \frac{\pi(x+1)/(1-\pi(x+1))}{ \pi(x)/(1-\pi(x))}\\
+&= \frac{\exp{(\beta_0 + \beta_1(x+1))}}{\exp{(\beta_0 + \beta_1 x)}}\\
+&= \exp \beta_1\\
+\end{split}
+\] For a model with multiple variables: \[
+\log{\frac{\pi_i}{1-\pi_i}} = \beta_0 + \beta_1 x_{1i} + ... + \beta_m x_{mi}
+\] We could define multiple such odds ratios: \[
+OR_m = \exp{\beta_m}
+\]
+
+\hypertarget{example-titanic-cont}{%
+\subsection{Example: Titanic (con't)}\label{example-titanic-cont}}
+
+Let's run a simple model on \texttt{pclass}, \texttt{age}:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{mod }\OtherTok{=} \FunctionTok{glm}\NormalTok{(survived }\SpecialCharTok{\textasciitilde{}}\NormalTok{ pclass}\SpecialCharTok{+}\NormalTok{age, }\AttributeTok{family=}\NormalTok{binomial, }\AttributeTok{data=}\NormalTok{dat)}
+\FunctionTok{summary}\NormalTok{(mod)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+## glm(formula = survived ~ pclass + age, family = binomial, data = dat)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -2.0576  -0.8986  -0.6673   1.0643   2.2744  
+## 
+## Coefficients:
+##              Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)  2.063195   0.260073   7.933 2.14e-15 ***
+## pclass2     -1.217554   0.193512  -6.292 3.14e-10 ***
+## pclass3     -2.220469   0.193816 -11.457  < 2e-16 ***
+## age         -0.037317   0.005515  -6.766 1.32e-11 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 1413.6  on 1044  degrees of freedom
+## Residual deviance: 1255.5  on 1041  degrees of freedom
+## AIC: 1263.5
+## 
+## Number of Fisher Scoring iterations: 4
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\StringTok{\textquotesingle{}Odds ratios:\textquotesingle{}}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Odds ratios:"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\FunctionTok{exp}\NormalTok{(mod}\SpecialCharTok{$}\NormalTok{coefficients))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## (Intercept)     pclass2     pclass3         age 
+##   7.8710754   0.2959531   0.1085582   0.9633712
+\end{verbatim}
+
+\textbf{Note that these ORs are not probabilities}. Only the
+\texttt{(Intercept)} OR can be interpreted as ``true odds'', since it
+gives you the odds of ``success'' (or survival) for the "base class* in
+our model. The OR corresponding to any variable \emph{modifies} the
+odds.
+
+Hence for a younger passenger in first class the survival odds were just
+under 8 to 1. For the same passenger in second class those odds were
+reduced to \(.29 * 7.87 \approx 2.3\), so about 2 to 1. The same
+passenger in third class had survival odds \(.1*7.87 \approx .79\) so
+roughly 4 to 3 \emph{against}. Every additional year on a passenger's
+age knocked \textasciitilde4\% off their survival odds.
+
+\hypertarget{binomially-distributed-data}{%
+\section{Binomially Distributed
+Data}\label{binomially-distributed-data}}
+
+In the above example, it was easy to think about each passenger as an
+individual \emph{Bernoulli trial}, and so assuming \(n_i=1\) was a
+natural choice.
+
+In many cases, however, logistic regression is applied to Binomial data
+with \(n_i > 1\)
+
+In general, logistic regression doesn't care whether our data has
+\(n_i=1\) or not, but it's instructive to look at an example. Let's see
+a case from dose-response modeling (IGLM 7.3.1).
+
+Say that we are trying to determine the properties of carbon disulphide,
+a gaseous insectiside, on a certain species of beetle. The following
+data shows the number of beetles dead after five hours of exposure:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{dose.dat }\OtherTok{=} \FunctionTok{read.csv}\NormalTok{(}\StringTok{\textquotesingle{}../../data/beetles.csv\textquotesingle{}}\NormalTok{)}
+\NormalTok{dose.dat}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##   dose  n  y
+## 1 1.69 59  6
+## 2 1.72 60 13
+## 3 1.76 62 18
+## 4 1.78 56 28
+## 5 1.81 63 52
+## 6 1.84 59 53
+## 7 1.86 62 61
+## 8 1.88 60 60
+\end{verbatim}
+
+From the Binomial PMF, we can quickly see that the likelihood function
+for this data (in terms of \(\pi_i\)) is: \[
+l(\pi_i;n_i) = \sum_i y_i \log\pi_i + (n_i-y_i) \log(1-\pi_i) + \log{{n_i \choose y_i}}
+\] Note that the last term \({n_i \choose y_i}\) does not depend on
+\(\pi_i\) and hence will not depend on \(\vec{\beta}\), so the only part
+we care about is: \[
+ \sum_i y_i \log\pi_i + (n_i-y_i) \log(1-\pi_i)
+\] Now say that instead of a Binomial distribution we had instead
+treated each beetle's outcome \(z_j\) as a Bernoulli trial: \[
+ \sum_j z_j \log\pi_j + (1-z_j) \log(1-\pi_j)
+\] Since we can group the \(n_i\) individuals at each dose level,
+\(x_j = x_i\): \[
+\begin{split}
+&\sum_i \left(\sum_{j=1}^{n_i} z_j\right) \log\pi_i + \left(\sum_{j=1}^{n_i} 1-z_j \right) \log(1-\pi_i) \\
+ &= \sum_i y_i \log\pi_i + (n_i - y_i) \log(1-\pi_i) \\
+\end{split}
+\] So when we take the derivative and compute the score function we will
+get the same thing, regardless of how we modeled.
+
+Unfortunately, \texttt{glm} has a \textbf{ludicrous} usage pattern for
+fitting this kind of ``grouped'' binomial data (ie. data where
+\(n_i>1\)). You need to construct a matrix with two columns, where the
+first contains the \(y_i\) (number of successes), while the second
+contains \(n_i-y_i\) (the number of failures). This looks like:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{dose.dat}\SpecialCharTok{$}\NormalTok{fails }\OtherTok{=}\NormalTok{ dose.dat}\SpecialCharTok{$}\NormalTok{n }\SpecialCharTok{{-}}\NormalTok{ dose.dat}\SpecialCharTok{$}\NormalTok{y}
+\NormalTok{lhs }\OtherTok{=} \FunctionTok{as.matrix}\NormalTok{(dose.dat[,}\FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}y\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}fails\textquotesingle{}}\NormalTok{)])}
+
+\NormalTok{mod.logit }\OtherTok{=} \FunctionTok{glm}\NormalTok{(lhs}\SpecialCharTok{\textasciitilde{}}\NormalTok{dose.dat}\SpecialCharTok{$}\NormalTok{dose, }\AttributeTok{family=}\NormalTok{binomial)}
+\FunctionTok{summary}\NormalTok{(mod.logit)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+## glm(formula = lhs ~ dose.dat$dose, family = binomial)
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -1.8986  -0.5475   0.9842   1.3315   1.7179  
+## 
+## Coefficients:
+##               Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)    -60.103      5.164  -11.64   <2e-16 ***
+## dose.dat$dose   33.934      2.903   11.69   <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 284.202  on 7  degrees of freedom
+## Residual deviance:  13.633  on 6  degrees of freedom
+## AIC: 43.831
+## 
+## Number of Fisher Scoring iterations: 4
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{plot}\NormalTok{(dose.dat}\SpecialCharTok{$}\NormalTok{dose,dose.dat}\SpecialCharTok{$}\NormalTok{y}\SpecialCharTok{/}\NormalTok{dose.dat}\SpecialCharTok{$}\NormalTok{n,}\AttributeTok{xlab=}\StringTok{\textquotesingle{}Dose\textquotesingle{}}\NormalTok{,}\AttributeTok{ylab=}\StringTok{\textquotesingle{}y/n\textquotesingle{}}\NormalTok{)}
+\CommentTok{\# note the type=\textquotesingle{}response\textquotesingle{}, which is special for GLMS and produces predictions on the $[y\_i] scale}
+\FunctionTok{lines}\NormalTok{(dose.dat}\SpecialCharTok{$}\NormalTok{dose,}\FunctionTok{predict}\NormalTok{(mod.logit, }\AttributeTok{type=}\StringTok{\textquotesingle{}response\textquotesingle{}}\NormalTok{),}\AttributeTok{col=}\StringTok{\textquotesingle{}red\textquotesingle{}}\NormalTok{)  }
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture14_files/figure-latex/unnamed-chunk-5-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(}\StringTok{\textquotesingle{}Odds ratios:\textquotesingle{}}\NormalTok{)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] "Odds ratios:"
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{exp}\NormalTok{(mod.logit}\SpecialCharTok{$}\NormalTok{coefficients)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##   (Intercept) dose.dat$dose 
+##  7.897278e-27  5.462866e+14
+\end{verbatim}
+
+\hypertarget{alternate-link-functions}{%
+\section{Alternate Link Functions}\label{alternate-link-functions}}
+
+Let's look at a few other common link functions. First up is the probit
+model:
+
+\[
+\Phi^{-1}(\pi_i) = \vec{x}_i^T \vec{\beta}
+\] The function \(\Phi\) is the CDF of the standard normal distribution:
+\[
+\begin{split}
+X &\sim N(0,1)\\
+\Phi(x) &= Pr[X \leq X| \mu=0, \sigma^2=1]
+\end{split}
+\] Since \(\pi_i = \Phi(\vec{x}_i^T \vec{\beta})\) it is guaranteed to
+stay in \([0,1]\) (since it's a probability).
+
+In general, the probit and logit functions operate \emph{very} similarly
+as link functions:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{mod.probit }\OtherTok{=} \FunctionTok{glm}\NormalTok{(lhs}\SpecialCharTok{\textasciitilde{}}\NormalTok{dose.dat}\SpecialCharTok{$}\NormalTok{dose, }\AttributeTok{family=}\FunctionTok{binomial}\NormalTok{(}\AttributeTok{link=}\StringTok{\textquotesingle{}probit\textquotesingle{}}\NormalTok{))}
+\FunctionTok{summary}\NormalTok{(mod.probit)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+## glm(formula = lhs ~ dose.dat$dose, family = binomial(link = "probit"))
+## 
+## Deviance Residuals: 
+##     Min       1Q   Median       3Q      Max  
+## -2.1365  -0.5795   0.9642   1.1333   1.4017  
+## 
+## Coefficients:
+##               Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)    -34.466      2.608  -13.21   <2e-16 ***
+## dose.dat$dose   19.471      1.465   13.29   <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 284.202  on 7  degrees of freedom
+## Residual deviance:  12.641  on 6  degrees of freedom
+## AIC: 42.84
+## 
+## Number of Fisher Scoring iterations: 4
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{plot}\NormalTok{(dose.dat}\SpecialCharTok{$}\NormalTok{dose,dose.dat}\SpecialCharTok{$}\NormalTok{y}\SpecialCharTok{/}\NormalTok{dose.dat}\SpecialCharTok{$}\NormalTok{n,}\AttributeTok{xlab=}\StringTok{\textquotesingle{}Dose\textquotesingle{}}\NormalTok{,}\AttributeTok{ylab=}\StringTok{\textquotesingle{}y/n\textquotesingle{}}\NormalTok{)}
+\FunctionTok{lines}\NormalTok{(dose.dat}\SpecialCharTok{$}\NormalTok{dose,}\FunctionTok{predict}\NormalTok{(mod.logit, }\AttributeTok{type=}\StringTok{\textquotesingle{}response\textquotesingle{}}\NormalTok{),}\AttributeTok{col=}\StringTok{\textquotesingle{}red\textquotesingle{}}\NormalTok{) }
+\FunctionTok{lines}\NormalTok{(dose.dat}\SpecialCharTok{$}\NormalTok{dose,}\FunctionTok{predict}\NormalTok{(mod.probit, }\AttributeTok{type=}\StringTok{\textquotesingle{}response\textquotesingle{}}\NormalTok{),}\AttributeTok{col=}\StringTok{\textquotesingle{}blue\textquotesingle{}}\NormalTok{) }
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture14_files/figure-latex/unnamed-chunk-6-1.pdf}
+
+Note that even though the coefficients are markedly different, the
+ultimate predictions are basically the same. Almost always there will be
+no difference between a logit and a probit model, except a logit model
+can be interpreted in terms of log-odds and a probit cannot.
+
+Note that, when the coefficient values are set equal, the probit model
+is slightly steeper:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{xgrid }\OtherTok{=} \FunctionTok{seq}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{10}\NormalTok{,}\DecValTok{10}\NormalTok{,.}\DecValTok{01}\NormalTok{)}
+\NormalTok{logit }\OtherTok{=} \FunctionTok{exp}\NormalTok{(xgrid)}\SpecialCharTok{/}\NormalTok{(}\DecValTok{1}\SpecialCharTok{+}\FunctionTok{exp}\NormalTok{(xgrid))}
+\NormalTok{probit }\OtherTok{=} \FunctionTok{pnorm}\NormalTok{(xgrid)}
+
+\FunctionTok{plot}\NormalTok{(xgrid,probit,}\AttributeTok{col=}\StringTok{\textquotesingle{}blue\textquotesingle{}}\NormalTok{,}\AttributeTok{type=}\StringTok{\textquotesingle{}l\textquotesingle{}}\NormalTok{,}\AttributeTok{xlab=}\StringTok{\textquotesingle{}x\textquotesingle{}}\NormalTok{,}\AttributeTok{ylab=}\StringTok{\textquotesingle{}\textquotesingle{}}\NormalTok{)}
+\FunctionTok{lines}\NormalTok{(xgrid,logit,}\AttributeTok{col=}\StringTok{\textquotesingle{}red\textquotesingle{}}\NormalTok{)}
+\FunctionTok{legend}\NormalTok{(}\StringTok{\textquotesingle{}topleft\textquotesingle{}}\NormalTok{,}\AttributeTok{col=}\FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}red\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}blue\textquotesingle{}}\NormalTok{),}\AttributeTok{lwd=}\DecValTok{1}\NormalTok{,}\AttributeTok{legend=}\FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}logit\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}probit\textquotesingle{}}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture14_files/figure-latex/unnamed-chunk-7-1.pdf}
+
+So this might matter to you (but it probably won't).
+
+Slightly different from logit and probit is the **complementary
+log-log\$ link function:
+
+\[
+\log{(-\log{(1-\pi_i)} )} = \vec{x}_i^T \vec{\beta}
+\] This is referred to in IGLM as the ``extreme value model'', as it can
+be interpreted as the CDF of the extreme value distribution.
+
+While both the logit and probit models are symmetric about \$
+\vec{x}\_i\^{}T \vec{\beta}=0\$: \[
+\begin{split}
+\text{logit}(\pi_i) &= -\text{logit}(1-\pi_i) \\
+\text{probit}(\pi_i) &= -\text{probit}(1-\pi_i) \\
+\end{split}
+\] This is not true for the complementary log-log link function, which
+allows a little assymetry:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{xgrid }\OtherTok{=} \FunctionTok{seq}\NormalTok{(}\SpecialCharTok{{-}}\DecValTok{10}\NormalTok{,}\DecValTok{10}\NormalTok{,.}\DecValTok{01}\NormalTok{)}
+\NormalTok{cll }\OtherTok{=} \DecValTok{1}\SpecialCharTok{{-}}\FunctionTok{exp}\NormalTok{(}\SpecialCharTok{{-}}\FunctionTok{exp}\NormalTok{(xgrid))}
+
+\FunctionTok{plot}\NormalTok{(xgrid,logit,}\AttributeTok{col=}\StringTok{\textquotesingle{}red\textquotesingle{}}\NormalTok{,}\AttributeTok{type=}\StringTok{\textquotesingle{}l\textquotesingle{}}\NormalTok{,}\AttributeTok{xlab=}\StringTok{\textquotesingle{}x\textquotesingle{}}\NormalTok{,}\AttributeTok{ylab=}\StringTok{\textquotesingle{}\textquotesingle{}}\NormalTok{)}
+\FunctionTok{lines}\NormalTok{(xgrid,probit,}\AttributeTok{col=}\StringTok{\textquotesingle{}blue\textquotesingle{}}\NormalTok{)}
+\FunctionTok{lines}\NormalTok{(xgrid,cll,}\AttributeTok{col=}\StringTok{\textquotesingle{}green\textquotesingle{}}\NormalTok{)}
+\FunctionTok{legend}\NormalTok{(}\StringTok{\textquotesingle{}topleft\textquotesingle{}}\NormalTok{,}\AttributeTok{col=}\FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}red\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}blue\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}green\textquotesingle{}}\NormalTok{),}\AttributeTok{lwd=}\DecValTok{1}\NormalTok{,}\AttributeTok{legend=}\FunctionTok{c}\NormalTok{(}\StringTok{\textquotesingle{}logit\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}probit\textquotesingle{}}\NormalTok{,}\StringTok{\textquotesingle{}CLL\textquotesingle{}}\NormalTok{))}
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture14_files/figure-latex/unnamed-chunk-8-1.pdf}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{mod.cll }\OtherTok{=} \FunctionTok{glm}\NormalTok{(lhs}\SpecialCharTok{\textasciitilde{}}\NormalTok{dose.dat}\SpecialCharTok{$}\NormalTok{dose, }\AttributeTok{family=}\FunctionTok{binomial}\NormalTok{(}\AttributeTok{link=}\StringTok{\textquotesingle{}cloglog\textquotesingle{}}\NormalTok{))}
+\FunctionTok{summary}\NormalTok{(mod.cll)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+## glm(formula = lhs ~ dose.dat$dose, family = binomial(link = "cloglog"))
+## 
+## Deviance Residuals: 
+##      Min        1Q    Median        3Q       Max  
+## -1.37517  -0.36801   0.07958   0.54314   1.46367  
+## 
+## Coefficients:
+##               Estimate Std. Error z value Pr(>|z|)    
+## (Intercept)    -38.889      3.127  -12.44   <2e-16 ***
+## dose.dat$dose   21.664      1.736   12.48   <2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## (Dispersion parameter for binomial family taken to be 1)
+## 
+##     Null deviance: 284.2024  on 7  degrees of freedom
+## Residual deviance:   5.6281  on 6  degrees of freedom
+## AIC: 35.826
+## 
+## Number of Fisher Scoring iterations: 4
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{plot}\NormalTok{(dose.dat}\SpecialCharTok{$}\NormalTok{dose,dose.dat}\SpecialCharTok{$}\NormalTok{y}\SpecialCharTok{/}\NormalTok{dose.dat}\SpecialCharTok{$}\NormalTok{n,}\AttributeTok{xlab=}\StringTok{\textquotesingle{}Dose\textquotesingle{}}\NormalTok{,}\AttributeTok{ylab=}\StringTok{\textquotesingle{}y/n\textquotesingle{}}\NormalTok{)}
+\FunctionTok{lines}\NormalTok{(dose.dat}\SpecialCharTok{$}\NormalTok{dose,}\FunctionTok{predict}\NormalTok{(mod.logit, }\AttributeTok{type=}\StringTok{\textquotesingle{}response\textquotesingle{}}\NormalTok{),}\AttributeTok{col=}\StringTok{\textquotesingle{}red\textquotesingle{}}\NormalTok{) }
+\FunctionTok{lines}\NormalTok{(dose.dat}\SpecialCharTok{$}\NormalTok{dose,}\FunctionTok{predict}\NormalTok{(mod.probit, }\AttributeTok{type=}\StringTok{\textquotesingle{}response\textquotesingle{}}\NormalTok{),}\AttributeTok{col=}\StringTok{\textquotesingle{}blue\textquotesingle{}}\NormalTok{) }
+\FunctionTok{lines}\NormalTok{(dose.dat}\SpecialCharTok{$}\NormalTok{dose,}\FunctionTok{predict}\NormalTok{(mod.cll, }\AttributeTok{type=}\StringTok{\textquotesingle{}response\textquotesingle{}}\NormalTok{),}\AttributeTok{col=}\StringTok{\textquotesingle{}green\textquotesingle{}}\NormalTok{) }
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture14_files/figure-latex/unnamed-chunk-8-2.pdf}
+
+\hypertarget{model-assessment-pseudo-r2}{%
+\section{\texorpdfstring{Model Assessment:
+Pseudo-\(R^2\)}{Model Assessment: Pseudo-R\^{}2}}\label{model-assessment-pseudo-r2}}
+
+Recall that, for linear regression we could compute the fraction
+variance explained:
+
+\[
+R^2 = 1 - \frac{\sum(y_i-\hat{y}_i)^2}{\sum(y_i-\bar{y}_i)^2}
+\] In logistic regression there are some analagous quantities.
+
+The first is Effron's \(R^2\): \[
+R^2 = 1 - \frac{\sum(y_i-\hat{\pi}_i)^2}{\sum(y_i-\bar{y}_i)^2}
+\]
+
+For example, for our Age+Ticket class model we have:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{mod }\OtherTok{=} \FunctionTok{glm}\NormalTok{(survived }\SpecialCharTok{\textasciitilde{}}\NormalTok{ pclass}\SpecialCharTok{+}\NormalTok{age, }\AttributeTok{family=}\NormalTok{binomial, }\AttributeTok{data=}\NormalTok{dat)}
+
+\NormalTok{pi.hat }\OtherTok{=} \FunctionTok{predict}\NormalTok{(mod,}\AttributeTok{type=}\StringTok{\textquotesingle{}response\textquotesingle{}}\NormalTok{)}
+\NormalTok{R2.effrons }\OtherTok{=} \DecValTok{1} \SpecialCharTok{{-}}\NormalTok{ (}\FunctionTok{sum}\NormalTok{((dat}\SpecialCharTok{$}\NormalTok{survived}\SpecialCharTok{{-}}\NormalTok{pi.hat)}\SpecialCharTok{\^{}}\DecValTok{2}\NormalTok{)}\SpecialCharTok{/}\FunctionTok{sum}\NormalTok{((dat}\SpecialCharTok{$}\NormalTok{survived}\SpecialCharTok{{-}}\FunctionTok{mean}\NormalTok{(dat}\SpecialCharTok{$}\NormalTok{survived))}\SpecialCharTok{\^{}}\DecValTok{2}\NormalTok{))}
+\NormalTok{R2.effrons}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 0.1469289
+\end{verbatim}
+
+Another option is McFadden's \(R^2\), which is percent improvement over
+a \emph{null model} (ie. only the intercept): \[
+R^2 = 1 - \frac{\log L}{\log L_0}
+\] Where \(L\) is the model likelihood and \(L_0\) is the null model
+likelihood. This choice of \(R^2\) works because the likelihood for a
+binomial model \(L \in [0,1]\) (since it's just the product of a bunch
+of probabilities), hence the largest possible value of \(\log L\) is
+\(0\) (when \(L=1\)).
+
+Let's use the McFadden's \(R^2\) to see which link function best fits
+the beetle dose-response:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{mod0 }\OtherTok{=} \FunctionTok{glm}\NormalTok{(lhs}\SpecialCharTok{\textasciitilde{}}\DecValTok{1}\NormalTok{, }\AttributeTok{family=}\NormalTok{binomial, }\AttributeTok{data=}\NormalTok{dose.dat)}
+
+\NormalTok{ll0 }\OtherTok{=} \FunctionTok{logLik}\NormalTok{(mod0)}
+\NormalTok{ll.logit }\OtherTok{=} \FunctionTok{logLik}\NormalTok{(mod.logit)}
+\NormalTok{ll.probit }\OtherTok{=} \FunctionTok{logLik}\NormalTok{(mod.probit)}
+\NormalTok{ll.cll }\OtherTok{=} \FunctionTok{logLik}\NormalTok{(mod.cll)}
+
+
+\FunctionTok{print}\NormalTok{(}\FunctionTok{c}\NormalTok{(}\DecValTok{1}\SpecialCharTok{{-}}\NormalTok{ll.logit}\SpecialCharTok{/}\NormalTok{ll0, }\DecValTok{1}\SpecialCharTok{{-}}\NormalTok{ll.probit}\SpecialCharTok{/}\NormalTok{ll0, }\DecValTok{1}\SpecialCharTok{{-}}\NormalTok{ll.cll}\SpecialCharTok{/}\NormalTok{ll0) )}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## [1] 0.8716773 0.8748729 0.8974674
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{plot}\NormalTok{(dose.dat}\SpecialCharTok{$}\NormalTok{dose,dose.dat}\SpecialCharTok{$}\NormalTok{y}\SpecialCharTok{/}\NormalTok{dose.dat}\SpecialCharTok{$}\NormalTok{n,}\AttributeTok{xlab=}\StringTok{\textquotesingle{}Dose\textquotesingle{}}\NormalTok{,}\AttributeTok{ylab=}\StringTok{\textquotesingle{}y/n\textquotesingle{}}\NormalTok{)}
+\FunctionTok{lines}\NormalTok{(dose.dat}\SpecialCharTok{$}\NormalTok{dose,}\FunctionTok{predict}\NormalTok{(mod.logit, }\AttributeTok{type=}\StringTok{\textquotesingle{}response\textquotesingle{}}\NormalTok{),}\AttributeTok{col=}\StringTok{\textquotesingle{}red\textquotesingle{}}\NormalTok{) }
+\FunctionTok{lines}\NormalTok{(dose.dat}\SpecialCharTok{$}\NormalTok{dose,}\FunctionTok{predict}\NormalTok{(mod.probit, }\AttributeTok{type=}\StringTok{\textquotesingle{}response\textquotesingle{}}\NormalTok{),}\AttributeTok{col=}\StringTok{\textquotesingle{}blue\textquotesingle{}}\NormalTok{) }
+\FunctionTok{lines}\NormalTok{(dose.dat}\SpecialCharTok{$}\NormalTok{dose,}\FunctionTok{predict}\NormalTok{(mod.cll, }\AttributeTok{type=}\StringTok{\textquotesingle{}response\textquotesingle{}}\NormalTok{),}\AttributeTok{col=}\StringTok{\textquotesingle{}green\textquotesingle{}}\NormalTok{) }
+\end{Highlighting}
+\end{Shaded}
+
+\includegraphics{lecture14_files/figure-latex/unnamed-chunk-10-1.pdf}
+
+We see that the assymetry allowed by the complementary log-log link
+function fits the data somewhat better than either the logit or probit
+models.
+
+\hypertarget{the-rule-of-10s}{%
+\section{The Rule of 10s}\label{the-rule-of-10s}}
+
+\end{document}

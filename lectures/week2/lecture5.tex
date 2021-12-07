@@ -1,0 +1,724 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{lmodern}
+\usepackage{amsmath}
+\usepackage{ifxetex,ifluatex}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+  \usepackage{amssymb}
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={Lecture 5- The Normal Equations},
+  pdfauthor={Peter Shaffery},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifluatex
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\title{Lecture 5- The Normal Equations}
+\author{Peter Shaffery}
+\date{1/26/2020}
+
+\begin{document}
+\maketitle
+
+\hypertarget{beginmath}{%
+\section{begin\{Math\}}\label{beginmath}}
+
+\hypertarget{matrix-primer}{%
+\subsection{Matrix Primer}\label{matrix-primer}}
+
+Matrices are rectangular arrays of numbers: \[
+M = \left[
+\begin{array}{ccc}
+0 & 1 & -2.3 \\
+1.3 & 4 & -1.7
+\end{array}
+\right]
+\] The numbers in the array are called \emph{matrix elements}. Each
+matrix has a pair of \emph{dimensions}, the number of \emph{rows} \(r\)
+and \emph{columns} \(c\) of elements in the matrix . The matrix
+dimensions are typically written as an ordered pair \((r,c)\) (sometimes
+\(r \times c\)). The example matrix \(M\) has dimension \((2,3)\). If
+\(r=c\) then the matrix is \emph{square}, if \(r>c\) then the matrix is
+\emph{long}, and if \(r<c\) then the matrix is \emph{wide}. Long and
+wide matrices are both referred to as \emph{rectangular}
+
+In many cases, we will have matrices whose elements are variables. In
+this case, we will refer to the element in the \(i^{\text{th}}\) row,
+and the \(j^{\text{th}}\) column as \(M_{ij}\). In the example matrix
+above, \(M_{12} = 1\) and \(M_{23} = -1.7\).
+
+Matrices with either a single column or row get the special name of
+\emph{vector}. If the vector is a row (ie. has dimension \((1,c)\)),
+then it is called a c-dimensional \emph{row vector}. If the vector is a
+column (ie. has dimension \((r,1)\)), then it is called an r-dimensional
+\emph{column vector}. Here is an example of a column vector: \[
+\vec{v} = \left[
+\begin{array}{c}
+1\\
+.01\\
+-7.5\\
+4
+\end{array}
+\right]
+\] As with matrices, we will often treat the elements of a vector as
+variables. In this case, we can refer to the \(i^{\text{th}}\) element
+of the vector as \(v_i\). This notation is used for both row and column
+vectors.
+
+A matrix with a single row and colum (ie. a number) is called a
+\emph{scalar}
+
+Just like with scalars, we can \emph{multiply} and \emph{add} matrices
+and vectors to each other. These operations have specific definitions.
+
+\hypertarget{addition}{%
+\subsubsection{Addition}\label{addition}}
+
+Addition is simplest. If we have two matrices, \(M\) and \(K\), then the
+matrix sum \(M+K\) is the matrix whose \(i^{\text{th}}\),
+\(j^{\text{th}}\) element is given by: \[
+(M+K)_{ij} = M_{ij} + K_{ij}
+\] Note that matrix addition requires that both \(M\) and \(K\) have the
+same number of rows and columns. We cannot add matrices of different
+dimensions. Vector addition works the same way.
+
+\hypertarget{multiplication}{%
+\subsubsection{Multiplication}\label{multiplication}}
+
+Multiplication between matrices is a little more complicated, and it's
+easier to start with multiplication between vectors.
+
+Vector multiplication can only occur between one row vector and one
+column vector with the same number of elements. Say that \(\vec{r}\) is
+a \((1,n)\) row vector, and \(\vec{c}\) is a \((n,1)\) column vector.
+Let's multiply with \(\vec{r}\) on the left and \(\vec{c}\) on the
+right: \[
+\vec{r} \vec{c} = \sum\limits_{i=1}^n r_i c_i
+\] Note that the output of this multiplication is a single number, a
+\emph{scalar}. Also notice that this type vector multiplication is only
+defined between a row vector of dimension \((1,n)\) and a column vector
+of dimension \((n,1)\).
+
+This is a particular instance of the general rule that matrix
+multiplication is only defined between matrices that have ``compatible''
+dimensions. The number of columns in the left matrix must match the
+number of rows in the right matrix, ie. compatible matrices have
+dimensions \((r,n)\) and \((n,c)\), and their product will have
+dimension \((r,c)\). Since for the vector example \(r=c=1\), the output
+is a \((1,1)\), ie. a single scalar.
+
+Multiplication between matrices operates very similarly to
+multiplication between vectors. Say that we have two compatible
+matrices: \(M\), which is \((r,n)\) and \(K\), which is \((n,c)\).
+Furthermore, let \(M_{i\cdot}\) denote the \(i^{\text{th}}\) row of
+\(M\), and let \(K_{\cdot j}\) denote the \(j^{\text{th}}\) column of
+\(K\). Observe that, for any \(i\) \(M_{i\cdot}\) is an \((1,n)\) row
+vector, and for any \(j\) \(K_{\cdot j}\) is a \((n,1)\) column vector.
+We can therefore use the above definition of vector multiplication to
+compute the scalar value
+\(M_{i\cdot} K_{\cdot j} = \sum\limits_{l=1}^n M_{il}K_{lj}\).
+
+This leads us to the definition of matrix multiplication: \[
+MK = \left[
+\begin{array}{ccc}
+M_{1\cdot} K_{\cdot 1} & ... & M_{1\cdot} K_{\cdot n}\\
+\vdots &  & \vdots \\
+M_{n\cdot} K_{\cdot 1} & ... & M_{n\cdot} K_{\cdot n}\\
+\end{array}
+\right]
+\] One important consequence of this definition, is that: \[
+MK \neq KM
+\] One final type of multiplication can occur between a scalar and a
+matrix: \[
+a M = \left[
+\begin{array}{ccc}
+aM_{11} & ... & a M_{1n}\\
+\vdots &  & \vdots \\
+aM_{n1} & ... & a M_{nn}\\
+\end{array}
+\right]
+\]
+
+\hypertarget{transpose-and-inverse}{%
+\subsubsection{Transpose and Inverse}\label{transpose-and-inverse}}
+
+There are two more important operations that we will need to define for
+matrices. First is the \emph{transpose}.
+
+A matrix \emph{transpose} is what you get by ``flipping'' the matrix
+along it's diagonal elements. It is denoted \(M^T\). So
+\((M^T)_{ij} = M_{ji}\). Going back to our original example:
+
+\$\$
+
+\begin{split}
+M &= \left[
+\begin{array}{ccc}
+0 & 1 & -2.3 \\
+1.3 & 4 & -1.7
+\end{array}
+\right]\\
+
+M^T &= \left[
+\begin{array}{cc}
+0 & 1.2 \\
+1 & 4 \\
+-2.3 & -1.7\\
+\end{array}
+\right]\\
+\end{split}
+
+\$\$
+
+A useful feature of matrix transpose is that it swaps the order of
+matrix multiplication: \[
+(MK)^T = K^T M^T
+\]
+
+A matrix \emph{inverse} is \textbf{only defined for square matrices}. If
+\(Q\) is an \((n,n)\) matrix, then it's inverse \(Q^{-1}\) is the matrix
+such that: \[
+QQ^{-1} = Q^{-1}Q = I
+\] Where \[
+I = \left[
+\begin{array}{cccc}
+1 & 0 & ... & 0\\
+0 & 1 & ... & 0\\
+\vdots & & \ddots & \vdots\\
+0 & 0 & ... & 1\\
+\end{array}
+\right]
+\] Is called the \emph{identity matrix}. It is true that (for any square
+matrix) \(QI = IQ= Q\)
+
+Matrices like the identity matrix, whose only non-zero elements are on
+the diagonal, are called \emph{diagonal matrices}.
+
+On useful fact about matrix transpose and inverse is that the
+operatations are interchangable: \[
+(M^T)^{-1} = (M^{-1})^T
+\]
+
+\hypertarget{matrix-form-of-mlr}{%
+\subsection{Matrix Form of MLR}\label{matrix-form-of-mlr}}
+
+So far in this course we've dealt with relatively small models, such as:
+\[
+y_i = \beta_0 + \beta_1 x_{1,i} + \beta_2 x_{2,i} + \epsilon_i
+\] When our model only has four terms, it's easy to write these out
+explicitly. This can get very quickly tiresome, however. Consider a
+model with 10 or even 20 predictors. Throughout most of history these
+models would be considered impractically large, but in the modern ``Big
+Data'' moment having 20 predictors is commonplace.
+
+We therefore need to develop a notation which makes writing such large
+models more compact. Enter matrix algebra.
+
+Let's use summation notation to write down a model with \(k\)
+independent variables: \[
+y_i = \beta_0 + \sum\limits_{j=1}^{k} \beta_j x_{j,i} + \epsilon_i
+\] If we adopt the convention that \(x_{0,i} = 1\) then we could even
+write this as: \[
+y_i = \sum\limits_{j=0}^{k} \beta_j x_{j,i} + \epsilon_i
+\] This is pretty compact, but we could get even more compact. Notice
+that the ``core'' of our model is made up of two operations:
+multiplication, and addition. We multiply \(\beta_j\) and \(x_{j,i}\),
+and then sum that product over \(j\).
+
+Notice that this combination of operations is more or less matrix
+multiplication. If we have define two vectors: \[
+\begin{split}
+\vec{x_i} &= [x_{0,i},...,x_{K,i}]^T\\
+\vec{\beta} &= [\beta_0,...,\beta_{K}]^T\\
+\end{split}
+\] Our dataset would then be the pairs \((\vec{x_i},y_i)\), and our
+model could be written: \[
+y_i = \vec{x_i}^T \vec{\beta} + \epsilon_i 
+\] This suggests to us an even more compact way of writing our model. If
+we define \(\vec{y} = [y_1,...,y_n]^T\) and \(\vec{\epsilon}\)
+similarly, then we could write our model for all data points
+simultaneously: \[
+\vec{y} = X \vec{\beta} + \vec{\epsilon}
+\] Where \(X\) is the \((n \times (k+1))\) dimensional matrix whose rows
+are the stacked vectors \(\vec{x}_i^T\): \[
+\begin{split}
+X &= \left[
+\begin{array}{c}
+\vec{x}^T_1\\
+\vdots\\
+\vec{x}^T_n\\
+\end{array}
+\right]\\
+X &= \left[
+\begin{array}{cccc}
+1 & x_{1,1} & ... & x_{1,k}\\ 
+\vdots & & & \vdots \\
+1 & x_{n,1} & ... & x_{n,k}\\ 
+\end{array}
+\right]\\
+\end{split}
+\]
+
+This matrix form of our model is mathematically identical to writing our
+model as a set of simultaneous equations: \[
+\begin{split}
+y_1 =& \beta_0  + \beta_1 x_{1,1} + \beta_2 x_{2,1} + ... + \beta_k x_{k,1} + \epsilon_1\\
+y_2 =& \beta_0  + \beta_1 x_{1,2} + \beta_2 x_{2,2} + ... + \beta_k x_{k,2} + \epsilon_2\\
+ & \vdots \\
+y_n =& \beta_0  + \beta_1 x_{1,n} + \beta_2 x_{2,n} + ... + \beta_k x_{k,n} + \epsilon_n\\
+\end{split}
+\] But a lot more compact!
+
+\hypertarget{the-normal-equations}{%
+\section{The Normal Equations}\label{the-normal-equations}}
+
+Recall that, during our discussion of SLR, we had derived our estimators
+\(\beta_0\) and \(\beta_1\) through the following argument.
+
+We had first said that \[
+y_i \sim N(\beta_0 + \beta_1 x_i, \sigma^2)
+\]
+
+We then showed that the total log-likelihood of observations was
+equivalent to: \[
+l(\beta_0,\beta_1; x_1,...,x_n, y_1,...,y_n) \propto - \sum\limits_{i=1}^n (y_i - \beta_0 - \beta_1 x_i)^2
+\]
+
+And that finally, we chose \(\hat{\beta_0}\) and \(\hat{\beta_1}\) by
+maximizing \(l(\beta_0,\beta_1; x_1,...,x_n, y_1,...,y_n)\).
+
+We can make a similar argument here. Now we have: \[
+y_i \sim N(\vec{x_i}^T \vec{\beta}, \sigma^2)
+\]
+
+And just like before, we can show that: \[
+l(\vec{\beta}; x_1,...,x_n, y_1,...,y_n) \propto - \sum\limits_{i=1}^n (y_i - \vec{x_i}^T \vec{\beta})^2
+\] Now, for the SLR version of this likelihood we could apply some Calc
+3 and perform this maximization explicitly. Doing so for this
+vector-valued likelihood is a little trickier. The upshot, however, is
+that the value of \(\hat{\vec{\beta}}\) which maximizes
+\(l(\hat{\vec{\beta}};x_1,...,x_n,y_1,...y_n)\) is also must satisfy the
+the vector-valued equation: \[
+X^TX \hat{\vec{\beta}} = X^T \vec{y}
+\]
+
+Where, again, the matrix \(X\) is obtained by stacking the observation
+vectors \(\vec{x}_i\) as rows.
+
+Notice that, conceptually, the normal equations are equivalent to: \[
+X \hat{\vec{\beta}}= \vec{y}
+\] But since \(X\) is not guaranteed to be a square matrix, we cannot
+solve this by taking the inverse \(X^{-1}\), hence why we pre-multiply
+both sides by \(X^T\), since \(X^TX\) is guaranteed to be invertible
+(unless there's a major problem with the variables in our model, known
+as \emph{collinearity}. We'll talk about that later).
+
+This vector relationship (or, equivalently, the system of linear
+equations it represents) are referred to as the \textbf{normal
+equations}. They can be solved to find \(\vec{\beta}\) by: \[
+\hat{\vec{\beta}} = (X^TX)^{-1} X^T \vec{y}
+\]
+
+Writing both the hat and vector symbol over the \(\beta\) is a little
+cumbersome, so I'll just abbreviate it as \(\hat{\beta}\).
+
+\hypertarget{kind-of-blue}{%
+\section{Kind of BLUE}\label{kind-of-blue}}
+
+I want to take a minute to talk about sone nice properties of
+\(\hat{\beta}\). These are not always relevant from an applied
+statistical perspective, but they are fundamental to the theoretical
+justification of some of the chocies that we've made so far, so they're
+important to keep in mind.
+
+Just as with our SLR estimates \(\hat{\beta_0}\) and \(\hat{\beta_1}\),
+our MLR estimate \(\hat{\beta}\) is a function of \(\vec{y}\). Indeed,
+it is a \emph{linear} function of \(\vec{y}\), since we could write it's
+equation down: \[
+\hat{\beta} = M \vec{y}
+\] Where the matrix \(M = (X^TX)^{-1} X^T\).
+
+This is our \emph{first} import property of \(\hat{\beta}\):
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \(\hat{\beta}\) is a \textbf{linear estimator} of the true \(\beta\).
+  Linearity here refers to the relationship between \(\hat{\beta}\) and
+  \(\vec{y}\).
+\end{enumerate}
+
+Since the vector \(\vec{y}\) is randomly distributed, then so is
+\(\hat{\beta}\). Indeed, \(\vec{y}\) is \emph{mulivariate normally
+distributed}, each element of the vector
+\(y_i \sim N( \vec{x}_i^T \vec{\beta}, \sigma^2)\). A multivariate
+normal distribution is, in many ways, the same as the 1-dimensional
+normal distribution, and we will denote it similarly: \[
+\vec{y} \sim MVN( X \vec{\beta}, \Sigma)
+\]
+
+However, note that the mean of this distribution \(X \vec{\beta}\) is a
+vector, and it's variance \(\Sigma\) is in fact a matrix. In this case
+\(\Sigma\) is the diagonal \(\sigma^2 * I\) (where \(I\) is the identity
+matrix whose diagonal elements are all 1s and everything else is 0), but
+for a general multivariate normal distribution it does not have to be
+diagonal. We'll talk more about variance matrices when we get into
+\emph{collinearity}.
+
+A nice property of multivariate normal distributions (which follows from
+the properites outlined in the Appendix of Lecture 2), is that any
+linear of a multivariate normal distribution is \emph{also} multivariate
+normal. If \(\vec{a} \sim MVN(\vec{\mu}, \Sigma)\) then
+\(M \vec{a} \sim MVN( M \vec{\mu}, M \Sigma M^T )\) for any matrix
+\(M\).
+
+Since \(\hat{\beta} = M \vec{y}\), where \(M = (X^TX)^{-1}X^T\). We can
+plug this directly into the above property of multivariate normals to
+get: \[
+\hat{\beta} \sim MVN( \left[(X^TX)^{-1}X^T \right] X \beta, \sigma^2 \left[(X^TX)^{-1}X^T\right] \left[(X^TX)^{-1}X^T\right]^T  )
+\]
+
+Of course after a bunch of matrix cancellation we are left with the far
+more manageable form: \[
+\hat{\beta} \sim N( \vec{\beta}, \sigma^2 (X^TX)^{-1} )
+\] This gives us to very valuable pieces of information about
+\(\hat{\beta}\). First, it gives us our \emph{second} important property
+of \(\hat{\beta}\), it is \textbf{unbiased}:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\setcounter{enumi}{1}
+\tightlist
+\item
+  \(E[\hat{\beta}] = \vec{\beta}\)
+\end{enumerate}
+
+Second, it tells us about the standard error of each element of
+\(\hat{\beta}\), \(\hat{\beta_i}\). The variance of these elements
+\(\hat{\beta_j}\) is given to us by the diagonal elements of the
+variance matrix \(\sigma^2 (X^TX)^{-1}\), and thus the standard error of
+each is just the square root of these diagonal elements.
+
+The third property of \(\hat{\beta}\) is called \textbf{best-ness}, and
+it's a little tricky to wrap your head around. Here \textbf{best} has a
+very particular meaning: among all the ways that we could have estimated
+\(\vec{\beta}\), \emph{which satisfy the previous properties of
+linearity and unbiased-ness}, \(\hat{\beta}\) has the \textbf{lowest
+variance}. Say that derived another estimator
+\(\hat{\beta}' = M' \vec{y}\), such that \(E[\hat{\beta}'] = \beta\),
+then the variance matrix of this estimate \(\Sigma_{\beta}'\) must be
+(in some sense) \emph{``bigger''} than \(\sigma^2 (X^TX)^{-1}\). The
+proof of this property is beyond the scope of the course, but if you
+want to look it up it's called the \textbf{Gauss-Markov Theorem}.
+
+Altogether we have the following three properties of \(\hat{\beta}\):
+
+\begin{itemize}
+\tightlist
+\item
+  \textbf{B}est-ness = \emph{lowest variance}
+\item
+  \textbf{L}inearity = \(\hat{\beta} = M \vec{y}\)
+\item
+  \textbf{U}nbiased-ness \(E[\hat{\beta}] = \vec{\beta}\)
+\end{itemize}
+
+ie. \(\hat{\beta}\) is the Best, Linear, Unbiased Estimator (BLUE) of
+\(\beta\).
+
+If you are familiar with the \emph{bias-variance} tradeoff, then you can
+understand the BLUE as one ``endpoint'' of that tradeoff (at which bias
+is globally minimized).
+
+\hypertarget{the-hat-matrix}{%
+\subsection{The Hat Matrix}\label{the-hat-matrix}}
+
+I'd like to talk about one final matrix before we end the math section,
+the so-called ``Hat Matrix''.
+
+Let's think about how we can use our estimate \(\hat{\beta}\) to make
+predictions about \(\vec{y}\).
+
+Recall that the MLR model can be written: \[
+\vec{y} = X \vec{\beta} + \vec{\epsilon}
+\] Given \(\hat{\beta}\) then, our ``best guess prediction''
+\(\hat{\vec{y}}\) is simply: \[
+\hat{\vec{y}} = X \hat{\beta}
+\] Now, let's go aheaad and substitute the formula for \(\hat{\beta}\)
+into this: \[
+\begin{split}
+\hat{\vec{y}} &= X (X^TX)^{-1}X^T \vec{y}\\
+\hat{\vec{y}} &= H \vec{y}\\
+\end{split}
+\] We see that our \emph{prediction} \(\hat{\vec{y}}\) is simply a
+\textbf{linear transformation} of the original observation vector
+\(\vec{y}\). That is, the matrix \(H=X (X^TX)^{-1}X^T\) transforms
+\(\vec{y}\) into \(\hat{\vec{y}}\) We therefore call \(H\) the ``hat
+matrix'', since it ``puts a hat on \(\vec{y}\)''.
+
+The hat matrix will be a very useful tool for diagnosing our model
+performance, as we will see next week.
+
+\hypertarget{endmath}{%
+\section{end\{Math\}}\label{endmath}}
+
+Back to the fuel example:
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(tidyverse)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## -- Attaching packages --------------------------------------- tidyverse 1.3.0 --
+\end{verbatim}
+
+\begin{verbatim}
+## v ggplot2 3.3.3     v purrr   0.3.4
+## v tibble  3.0.4     v dplyr   1.0.2
+## v tidyr   1.1.2     v stringr 1.4.0
+## v readr   1.4.0     v forcats 0.5.0
+\end{verbatim}
+
+\begin{verbatim}
+## -- Conflicts ------------------------------------------ tidyverse_conflicts() --
+## x dplyr::filter() masks stats::filter()
+## x dplyr::lag()    masks stats::lag()
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(magrittr)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Attaching package: 'magrittr'
+\end{verbatim}
+
+\begin{verbatim}
+## The following object is masked from 'package:purrr':
+## 
+##     set_names
+\end{verbatim}
+
+\begin{verbatim}
+## The following object is masked from 'package:tidyr':
+## 
+##     extract
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{library}\NormalTok{(pracma) }\CommentTok{\# Practical Numerical Math Functions}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Attaching package: 'pracma'
+\end{verbatim}
+
+\begin{verbatim}
+## The following objects are masked from 'package:magrittr':
+## 
+##     and, mod, or
+\end{verbatim}
+
+\begin{verbatim}
+## The following object is masked from 'package:purrr':
+## 
+##     cross
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{fuel }\OtherTok{=} \FunctionTok{read.csv}\NormalTok{(}\StringTok{\textquotesingle{}../../data/fuel.csv\textquotesingle{}}\NormalTok{)}
+\NormalTok{fuel }\SpecialCharTok{\%\textless{}\textgreater{}\%}\NormalTok{ drop\_na}
+\NormalTok{fuel }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ head}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##    pop  tax licenses income  hwy  gas state
+## 1 1029  9.0      540   3571 1976  557    ME
+## 2  771  9.0      441   4092 1250  404    NH
+## 3  462  9.0      268   3865 1586  259    VT
+## 4 5787  7.5     3060   4870 2351 2396    MA
+## 5  968  8.0      527   4399  431  397    RI
+## 6 3082 10.0     1760   5342 1333 1408    CT
+\end{verbatim}
+
+Now, for our model we'll use: \[
+\text{GAS} = \beta_0 + \beta_1 \text{TAX} + \beta_2 \text{LICENSES} + \beta_3 \text{HWY} +\beta_2 \text{INCOME}
+\] First, let's define our vector \(y\) and matrix \(X\)
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\NormalTok{y }\OtherTok{=}\NormalTok{ fuel}\SpecialCharTok{$}\NormalTok{gas}
+\NormalTok{X }\OtherTok{=}\NormalTok{ fuel }\SpecialCharTok{\%\textgreater{}\%} \FunctionTok{select}\NormalTok{(}\FunctionTok{c}\NormalTok{(tax,licenses,hwy,income)) }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ as.matrix}
+
+\NormalTok{n }\OtherTok{=}\NormalTok{ X }\SpecialCharTok{\%\textgreater{}\%}\NormalTok{ nrow}
+\NormalTok{X }\SpecialCharTok{\%\textless{}\textgreater{}\%} \FunctionTok{cbind}\NormalTok{(}\FunctionTok{rep}\NormalTok{(}\DecValTok{1}\NormalTok{,n),.) }\CommentTok{\# create the 0th column of ones}
+
+\NormalTok{M }\OtherTok{=} \FunctionTok{inv}\NormalTok{(}\FunctionTok{t}\NormalTok{(X) }\SpecialCharTok{\%*\%}\NormalTok{ X) }\SpecialCharTok{\%*\%} \FunctionTok{t}\NormalTok{(X) }\CommentTok{\# M = (X\^{}T X)\^{}\{{-}1\} X\^{}T}
+\NormalTok{beta.hat }\OtherTok{=}\NormalTok{ M  }\SpecialCharTok{\%*\%}\NormalTok{ y}
+
+\NormalTok{H }\OtherTok{=}\NormalTok{ X }\SpecialCharTok{\%*\%}\NormalTok{ M}
+\NormalTok{y.hat }\OtherTok{=}\NormalTok{ H }\SpecialCharTok{\%*\%}\NormalTok{ y}
+
+\NormalTok{eps.hat }\OtherTok{=}\NormalTok{ y }\SpecialCharTok{{-}}\NormalTok{ y.hat}
+\NormalTok{sigma2.hat }\OtherTok{=} \FunctionTok{sum}\NormalTok{(eps.hat}\SpecialCharTok{**}\DecValTok{2}\NormalTok{)}\SpecialCharTok{/}\NormalTok{(n}\DecValTok{{-}2}\NormalTok{)}
+
+\NormalTok{se.beta }\OtherTok{=} \FunctionTok{sqrt}\NormalTok{( sigma2.hat }\SpecialCharTok{*} \FunctionTok{diag}\NormalTok{( }\FunctionTok{inv}\NormalTok{(}\FunctionTok{t}\NormalTok{(X)}\SpecialCharTok{\%*\%}\NormalTok{X) ) )}
+
+
+\FunctionTok{print}\NormalTok{(beta.hat)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                   [,1]
+##          1262.12973469
+## tax       -46.79292086
+## licenses    0.85529505
+## hwy         0.04419704
+## income     -0.21610346
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{print}\NormalTok{(se.beta)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##                       tax     licenses          hwy       income 
+## 498.14052441  41.25717029   0.02377908   0.01643887   0.07128051
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{summary}\NormalTok{(}\FunctionTok{lm}\NormalTok{(gas}\SpecialCharTok{\textasciitilde{}}\NormalTok{tax}\SpecialCharTok{+}\NormalTok{licenses}\SpecialCharTok{+}\NormalTok{hwy}\SpecialCharTok{+}\NormalTok{income, }\AttributeTok{data=}\NormalTok{fuel))}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+## 
+## Call:
+## lm(formula = gas ~ tax + licenses + hwy + income, data = fuel)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -1031.00  -101.36   -33.43   107.58   870.39 
+## 
+## Coefficients:
+##               Estimate Std. Error t value Pr(>|t|)    
+## (Intercept) 1262.12973  514.47732   2.453  0.01810 *  
+## tax          -46.79292   42.61022  -1.098  0.27798    
+## licenses       0.85530    0.02456  34.826  < 2e-16 ***
+## hwy            0.04420    0.01698   2.603  0.01246 *  
+## income        -0.21610    0.07362  -2.935  0.00523 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 266.2 on 45 degrees of freedom
+## Multiple R-squared:  0.9855, Adjusted R-squared:  0.9842 
+## F-statistic: 764.8 on 4 and 45 DF,  p-value: < 2.2e-16
+\end{verbatim}
+
+\end{document}

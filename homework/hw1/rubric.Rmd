@@ -1,0 +1,50 @@
+---
+title: "Homework 1"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+## RABE 2.2 (3 pts)
+
+**1 point for each correct**
+
+Explain why you would or would not agree with each of the following statements:
+
+a. **True**
+
+b. **False**
+
+c. **True**
+
+## RABE 2.3 (4 pts)
+
+**1 point for each correct**
+
+Using the regression output listed below ("Computer Repair Data Regression Table"), test the following hypotheses using $\alpha = 0.1$:
+
+a. **Fail to reject**
+b. **Fail to reject**
+c. **Reject**
+d. **Reject**
+
+## RABE 2.4
+**Ungraded**
+
+## RABE 2.12 (3 pts)
+In order to investigate the feasibility of starting a Sunday edition for a large metropolitan newspaper, information was obtained from a sample of 34 news-papers concerning their daily and Sunday circulations (in thousands). The data are online here: [http://www1.aucegypt.edu/faculty/hadi/RABE5/Data5/P054.txt](http://www1.aucegypt.edu/faculty/hadi/RABE5/Data5/P054.txt).
+
+a. **Reasonable plot (1 point)**
+b. **Ungraded**
+c. **Ungraded**
+d. **Reject $H_0$ (1 point)**
+e. **Ungraded**
+f. **[ 6446K, 723K] (1 point)**
+g. **Ungraded**
+h. **Ungraded**
+
+
+## RABE 2.13
+**Ungraded**
